@@ -21,7 +21,7 @@ contract NftRegistry is OApp {
     event LockerUpdated(address indexed newLocker);
 
     event NftRegisted(address indexed user, uint256 indexed totalLocked);
-    event NftDeregisted(address indexed user, uint256 indexed totalLocked);
+    event NftReleased(address indexed user, uint256 indexed totalLocked);
 
     event NftStaked(address indexed user, uint256 indexed totalLocked, uint256 indexed totalStaked);
     event NftUnstaked(address indexed user, uint256 indexed totalStaked);
@@ -50,17 +50,17 @@ contract NftRegistry is OApp {
     }
     
     // calls NftLocker on Ethereum. called by user
-    function deregister(uint32 _dstEid, bytes calldata _options) external {
-        _deregister(msg.sender, _dstEid, _options);
+    function release(uint32 _dstEid, bytes calldata _options) external {
+        _release(msg.sender, _dstEid, _options);
     }
     
     // admin to call deregister on a specific user in special cases 
-    function deregister(address onBehalfOf,uint32 _dstEid, bytes calldata _options) external onlyOwner {
-        _deregister(onBehalfOf, _dstEid, _options);
+    function release(address onBehalfOf, uint32 _dstEid, bytes calldata _options) external onlyOwner {
+        _release(onBehalfOf, _dstEid, _options);
     }
 
     // calls NftLocker on Ethereum.
-    function _deregister(address onBehalfOf, uint32 _dstEid, bytes calldata _options) internal {
+    function _release(address onBehalfOf, uint32 _dstEid, bytes calldata _options) internal {
         
         // cache 
         UserData memory user = users[onBehalfOf];
@@ -68,7 +68,7 @@ contract NftRegistry is OApp {
         // decrement
         --user.totalLocked;
 
-        emit NftDeregisted(onBehalfOf, user.totalLocked);
+        emit NftReleased(onBehalfOf, user.totalLocked);
 
         // Encodes message as bytes
         bytes memory _payload = abi.encode(onBehalfOf);
