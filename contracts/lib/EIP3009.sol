@@ -25,13 +25,11 @@
 // Note: source: https://github.com/CoinbaseStablecoin/eip-3009/blob/master/contracts/lib/EIP3009.sol
 // circle uses this
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.20;
 
 import { IERC20Internal } from "./IERC20Internal.sol";
 import { EIP712Domain } from "./EIP712Domain.sol";
 import { EIP712 } from "./EIP712.sol";
-
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 abstract contract EIP3009 is IERC20Internal, EIP712Domain {
     // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)")
@@ -193,8 +191,8 @@ abstract contract EIP3009 is IERC20Internal, EIP712Domain {
         bytes32 r,
         bytes32 s
     ) internal {
-        require(now > validAfter, "EIP3009: authorization is not yet valid");
-        require(now < validBefore, "EIP3009: authorization is expired");
+        require(block.timestamp > validAfter, "EIP3009: authorization is not yet valid");
+        require(block.timestamp < validBefore, "EIP3009: authorization is expired");
         require(!_authorizationStates[from][nonce], _AUTHORIZATION_USED_ERROR);
 
         bytes memory data = abi.encode(

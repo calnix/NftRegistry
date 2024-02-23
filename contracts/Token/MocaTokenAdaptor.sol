@@ -1,19 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "@layerzerolabs/contracts/OFTAdapter.sol";
+import { OFTAdapter } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTAdapter.sol";
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MocaTokenAdaptor is OFTAdapter {
+//Note: Adaptor is only to be deployed on the home chain where the token contract was originally deployed. 
+//      Must approve OFT Adapter as a spender of your ERC20 token.
+contract MocaTokenAdaptor is OFTAdapter, Pausable {
 
-    constructor(
-        address _token, // a deployed, already existing ERC20 token address
-        address _layerZeroEndpoint, // local endpoint address
-        address _owner // token owner
-        ) OFTAdapter(_token, _layerZeroEndpoint, _owner) {
-            //
-            // your custom contract logic here
-            //
-        }
+    /**
+     * @param _token a deployed, already existing ERC20 token address
+     * @param _layerZeroEndpoint local endpoint address
+     * @param _owner token owner
+     */
+    constructor(address _token, address _layerZeroEndpoint, address _owner) OFTAdapter(_token, _layerZeroEndpoint, _owner) Ownable(_owner) {
+
+    }
+
+
+
+
 }
 
 
