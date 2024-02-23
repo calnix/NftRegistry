@@ -9,6 +9,7 @@ contract MocaToken is ERC20, Ownable {
     constructor(string memory name, string memory symbol, address owner) ERC20(name, symbol) Ownable(owner) {}
 
 
+    // free mint baby
     function mint(uint256 amount) external {
 
         _mint(msg.sender, amount);

@@ -4,7 +4,8 @@ pragma solidity ^0.8.22;
 import "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-//Note: To be deployed everywhere else, 
+//Note: To be deployed everywhere else, outside of the home chain
+//      18 dp
 contract MocaOFT is OFT {
 
     /**
