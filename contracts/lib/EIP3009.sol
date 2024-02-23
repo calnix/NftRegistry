@@ -22,16 +22,16 @@
  * SOFTWARE.
  */
 
-// Note: source: https://github.com/CoinbaseStablecoin/eip-3009/blob/master/contracts/lib/EIP3009.sol
-// circle uses this
-
 pragma solidity ^0.8.20;
 
 import { IERC20Internal } from "./IERC20Internal.sol";
 import { EIP712Domain } from "./EIP712Domain.sol";
 import { EIP712 } from "./EIP712.sol";
 
-abstract contract EIP3009 is IERC20Internal, EIP712Domain {
+// newly added
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+abstract contract EIP3009 is ERC20, EIP712Domain {
     // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)")
     bytes32
         public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
@@ -78,17 +78,7 @@ abstract contract EIP3009 is IERC20Internal, EIP712Domain {
      * @param r             r of the signature
      * @param s             s of the signature
      */
-    function transferWithAuthorization(
-        address from,
-        address to,
-        uint256 value,
-        uint256 validAfter,
-        uint256 validBefore,
-        bytes32 nonce,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s) external {
         _transferWithAuthorization(
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             from,
@@ -106,8 +96,7 @@ abstract contract EIP3009 is IERC20Internal, EIP712Domain {
     /**
      * @notice Receive a transfer with a signed authorization from the payer
      * @dev This has an additional check to ensure that the payee's address matches
-     * the caller of this function to prevent front-running attacks. (See security
-     * considerations)
+     * the caller of this function to prevent front-running attacks. (See security considerations)
      * @param from          Payer's address (Authorizer)
      * @param to            Payee's address
      * @param value         Amount to be transferred
@@ -160,20 +149,10 @@ abstract contract EIP3009 is IERC20Internal, EIP712Domain {
         bytes32 r,
         bytes32 s
     ) external {
-        require(
-            !_authorizationStates[authorizer][nonce],
-            _AUTHORIZATION_USED_ERROR
-        );
+        require(!_authorizationStates[authorizer][nonce], _AUTHORIZATION_USED_ERROR);
 
-        bytes memory data = abi.encode(
-            CANCEL_AUTHORIZATION_TYPEHASH,
-            authorizer,
-            nonce
-        );
-        require(
-            EIP712.recover(DOMAIN_SEPARATOR, v, r, s, data) == authorizer,
-            _INVALID_SIGNATURE_ERROR
-        );
+        bytes memory data = abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, authorizer, nonce);
+        require(EIP712.recover(DOMAIN_SEPARATOR, v, r, s, data) == authorizer, _INVALID_SIGNATURE_ERROR);
 
         _authorizationStates[authorizer][nonce] = true;
         emit AuthorizationCanceled(authorizer, nonce);
@@ -204,10 +183,7 @@ abstract contract EIP3009 is IERC20Internal, EIP712Domain {
             validBefore,
             nonce
         );
-        require(
-            EIP712.recover(DOMAIN_SEPARATOR, v, r, s, data) == from,
-            _INVALID_SIGNATURE_ERROR
-        );
+        require(EIP712.recover(DOMAIN_SEPARATOR, v, r, s, data) == from, _INVALID_SIGNATURE_ERROR);
 
         _authorizationStates[from][nonce] = true;
         emit AuthorizationUsed(from, nonce);
