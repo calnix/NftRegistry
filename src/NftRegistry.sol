@@ -9,22 +9,22 @@ contract NftRegistry is OApp {
 
     address public pool;
 
-    struct UserData {
-        uint128 totalLocked;
-        uint128 totalStaked;
+    struct TokenData {
+        bytes32 vaultId;         // non-zero value if staked
+        address owner;
     }
 
-    mapping(address user => UserData userData) public users;
+    mapping(uint256 tokenId => TokenData data) public tokenIds;
 
     // events
     event PoolUpdated(address indexed newPool);
     event LockerUpdated(address indexed newLocker);
 
-    event NftRegisted(address indexed user, uint256 indexed totalLocked);
-    event NftReleased(address indexed user, uint256 indexed totalLocked);
+    event NftRegisted(address indexed user, uint256 indexed tokenId);
+    event NftReleased(address indexed user, uint256 indexed tokenId);
 
-    event NftStaked(address indexed user, uint256 indexed totalLocked, uint256 indexed totalStaked);
-    event NftUnstaked(address indexed user, uint256 indexed totalStaked);
+    event NftStaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
+    event NftUnstaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
 
 //-------------------------------constructor-------------------------------------------
     constructor(address _endpoint, address _owner, address pool_) OApp(_endpoint, _owner) Ownable(_owner) {
@@ -36,45 +36,52 @@ contract NftRegistry is OApp {
     //////////////////////////////////////////////////////////////*/
 
     // only callable by LZ
-    function _register(address onBehalfOf) internal {
-        // cache 
-        UserData memory user = users[onBehalfOf];
+    function _register(address onBehalfOf, uint256 tokenId) internal {
+        
+        // cache
+        TokenData memory data = tokenIds[tokenId];
 
-        // increment
-        ++user.totalLocked;
-        
+        // ensure tokenId does not belong to someone else
+        require(data.owner == address(0), "Incorrect tokenId");
+
         // update storage
-        users[onBehalfOf] = user;
+        data.owner = onBehalfOf;
         
-        emit NftRegisted(onBehalfOf, user.totalLocked);
+        emit NftRegisted(onBehalfOf, tokenId);
     }
     
     // calls NftLocker on Ethereum. called by user
-    function release(uint32 _dstEid, bytes calldata _options) external {
-        _release(msg.sender, _dstEid, _options);
+    function release(uint256 tokenId, uint32 _dstEid, bytes calldata _options) external {
+        _release(msg.sender, tokenId, _dstEid, _options);
     }
     
     // admin to call deregister on a specific user in special cases 
-    function release(address onBehalfOf, uint32 _dstEid, bytes calldata _options) external onlyOwner {
-        _release(onBehalfOf, _dstEid, _options);
+    function release(address onBehalfOf, uint256 tokenId, uint32 _dstEid, bytes calldata _options) external onlyOwner {
+        _release(onBehalfOf, tokenId, _dstEid, _options);
     }
 
     // calls NftLocker on Ethereum.
-    function _release(address onBehalfOf, uint32 _dstEid, bytes calldata _options) internal {
+    function _release(address onBehalfOf, uint256 tokenId, uint32 dstEid, bytes calldata options) internal {
         
-        // cache 
-        UserData memory user = users[onBehalfOf];
-        
-        // decrement
-        --user.totalLocked;
+        // cache
+        TokenData memory data = tokenIds[tokenId];
 
-        emit NftReleased(onBehalfOf, user.totalLocked);
+        // ensure tokenId does not belong to someone else
+        require(data.owner == onBehalfOf, "Incorrect tokenId");
+        // ensure NFT has not been staked
+        require(data.vaultId == bytes32(0), "Nft is staked");
+
+        // update storage
+        data.owner = address(0);
+        tokenIds[tokenId] = data;
+
+        emit NftReleased(onBehalfOf, tokenId);
 
         // Encodes message as bytes
-        bytes memory _payload = abi.encode(onBehalfOf);
-
+        bytes memory payload = abi.encode(onBehalfOf, tokenId);
+        
         //lz
-        _lzSend(_dstEid, _payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        _lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
     }
 
 //-------------------------------------------------------------------------------------
@@ -89,43 +96,41 @@ contract NftRegistry is OApp {
     }
 
     ///@dev only callable by pool
-    function recordStake(address onBehalfOf, uint256 amount) external {
+    function recordStake(address onBehalfOf, uint256 tokenId, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
         // cache 
-        UserData memory user = users[onBehalfOf];
+        TokenData memory data = tokenIds[tokenId];
 
-        // check available
-        uint256 available = user.totalLocked - user.totalStaked;
-        require(available >= amount, "Incorrect amount");
-
-        // increment
-        ++user.totalStaked;
-
-        // update storage
-        users[onBehalfOf] = user;
+        // ensure tokenId does not belong to someone else
+        require(data.owner == onBehalfOf, "Incorrect tokenId");
+        // ensure NFT has not been staked
+        require(data.vaultId == bytes32(0), "Nft is staked");
         
-        emit NftStaked(onBehalfOf, user.totalLocked, user.totalStaked);
+        // update storage
+        data.vaultId = vaultId;
+        tokenIds[tokenId] = data;
+        
+        emit NftStaked(onBehalfOf, tokenId, vaultId);
     }
 
     ///@dev only callable by pool
-    function recordUnstake(address onBehalfOf, uint128 amount) external {
+    function recordUnstake(address onBehalfOf, uint256 tokenId, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
         // cache 
-        UserData storage user = users[onBehalfOf];
-        uint128 totalStaked = user.totalStaked;
+        TokenData memory data = tokenIds[tokenId];
 
-        // check available
-        require(totalStaked >= amount, "Incorrect amount");
-
-        // derement
-        --totalStaked;
-
-        // update storage
-        users[onBehalfOf].totalStaked = totalStaked;
+        // ensure tokenId does not belong to someone else
+        require(data.owner == onBehalfOf, "Incorrect tokenId");
+        // ensure correct vaultId
+        require(data.vaultId != vaultId, "Incorrect vaultId");
         
-        emit NftUnstaked(onBehalfOf, totalStaked);
+        // update storage
+        delete data.vaultId;
+        tokenIds[tokenId] = data;
+        
+        emit NftUnstaked(onBehalfOf, tokenId, vaultId);
     }
 
 //-------------------------------------------------------------------------------------
@@ -145,7 +150,7 @@ contract NftRegistry is OApp {
     function send(uint32 _dstEid, bytes calldata _options, address onBehalfOf, uint256 tokenId) external payable {
         
         // Encodes message as bytes
-        bytes memory _payload = abi.encode(tokenId, onBehalfOf);
+        bytes memory _payload = abi.encode(onBehalfOf, tokenId);
 
         _lzSend(_dstEid, _payload, _options, 
             MessagingFee(msg.value, 0),     // Fee struct containing native gas and ZRO token.
@@ -163,13 +168,24 @@ contract NftRegistry is OApp {
      */
     function _lzReceive(Origin calldata origin, bytes32 guid, bytes calldata payload, address executor, bytes calldata extraData) internal override {
         
-        // tokendId, owner
-        address owner = abi.decode(payload, (address));
+        // owner, tokendId
+        (address owner, uint256 tokenId) = abi.decode(payload, (address, uint256));
 
         // update
-        _register(owner);
+        _register(owner, tokenId);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                                GETTERS
+    //////////////////////////////////////////////////////////////*/
+
+    function getOwnerOf(uint256 tokenId) external view returns(address){
+        return tokenIds[tokenId].owner;
+    }
+
+    function getVaultId(uint256 tokenId) external view returns(bytes32){
+        return tokenIds[tokenId].vaultId;
+    }
 }
 
 
