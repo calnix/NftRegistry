@@ -19,7 +19,6 @@ abstract contract StateZero is Test {
 
     NftRegistry public nftRegistry;
     EndpointV2Mock public lzMock;
-    Router public router;
 
     address public userA;
     address public userB;
@@ -27,41 +26,5 @@ abstract contract StateZero is Test {
 
     uint32 public dstEid;
 
-    function setUp() public virtual {
-        // users
-        userA = makeAddr("userA");
-        userB = makeAddr("userB");
-        owner = makeAddr("owner");
 
-        // contracts
-
-        vm.startPrank(owner);
-
-
-
-        lzMock = new EndpointV2Mock();
-        nftLocker = new NftLocker(address(lzMock), owner, address(nft));
-
-        router = new Router(address(nft), address(nftLocker)); 
-
-        // point Locker to router
-        nftLocker.point(address(router));
-
-        //setUp Oapp
-        nftLocker.setPeer(dstEid, bytes32(uint256(uint160(address(1)))));
-
-        vm.stopPrank();
-
-        // mint to user
-        vm.prank(userA);
-        nft.mint(1);
-
-        vm.prank(userB);
-        nft.mint(2);
-
-        vm.prank(userB);
-        nft.mint(3);
-
-
-    } 
 }

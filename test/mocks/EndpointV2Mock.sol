@@ -8,7 +8,8 @@ contract EndpointV2Mock {
 
     function setDelegate(address /*_delegate*/) external {}
 
-    function send(MessagingParams memory messagingParams, address _refundAddress) external returns (MessagingReceipt memory receipt) {
+    function send(MessagingParams memory messagingParams, address _refundAddress) external returns (MessagingReceipt memory) {
         MessagingReceipt memory receipt;
+        return receipt;
     }
 }

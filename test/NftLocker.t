@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
 
-import {Router} from "./../src/Router.sol";
 import {NftLocker} from "./../src/NftLocker.sol";
 import {Ownable} from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
@@ -24,7 +23,6 @@ abstract contract StateZero is Test {
     MockNft public nft;
     NftLocker public nftLocker;
     EndpointV2Mock public lzMock;
-    Router public router;
 
     address public userA;
     address public userB;
@@ -38,6 +36,7 @@ abstract contract StateZero is Test {
         userB = makeAddr("userB");
         owner = makeAddr("owner");
 
+
         // contracts
 
         vm.startPrank(owner);
@@ -47,11 +46,6 @@ abstract contract StateZero is Test {
 
         lzMock = new EndpointV2Mock();
         nftLocker = new NftLocker(address(lzMock), owner, address(nft));
-
-        router = new Router(address(nft), address(nftLocker)); 
-
-        // point Locker to router
-        nftLocker.point(address(router));
 
         //setUp Oapp
         nftLocker.setPeer(dstEid, bytes32(uint256(uint160(address(1)))));
@@ -166,7 +160,6 @@ contract StateZeroTest is StateZero {
 
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
-         router.batch(allCalls);
         
         vm.stopPrank();
 

@@ -22,3 +22,8 @@ update foundry.toml for remmapings
 - how to continue to script through that safe in the future? (esp. after multiple iterations/deployments)
 - reject deployment: cos' i used the wrong signer (phantom -> MM). Just redo and overwrrite?
 - 
+
+
+## LZ quesntionm
+
+- options when calling `lock`

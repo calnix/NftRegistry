@@ -14,7 +14,7 @@ contract NftRegistry is OApp {
         address owner;
     }
 
-    mapping(uint256 tokenId => TokenData data) public tokenIds;
+    mapping(uint256 tokenId => TokenData data) public nfts;
 
     // events
     event PoolUpdated(address indexed newPool);
@@ -35,56 +35,121 @@ contract NftRegistry is OApp {
                                  LOCKER
     //////////////////////////////////////////////////////////////*/
 
-    // only callable by LZ
-    function _register(address onBehalfOf, uint256 tokenId) internal {
-        
-        // cache
-        TokenData memory data = tokenIds[tokenId];
+    // only callable by _lzReceive
+    //Note: if revert: storage must be modified by admin on Locker 
+    function _register(address user, uint256[] memory tokenIds) internal {
 
-        // ensure tokenId does not belong to someone else
-        require(data.owner == address(0), "Incorrect tokenId");
+        uint256 length = tokenIds.length;
+        for (uint256 i; i < length; ++i) {
 
-        // update storage
-        data.owner = onBehalfOf;
-        
-        emit NftRegistered(onBehalfOf, tokenId);
+            uint256 tokenId = tokenIds[i];
+
+            // cache
+            TokenData memory data = nfts[tokenId];
+
+            // ensure tokenId does not belong to someone else
+            require(data.owner == address(0), "Already registered");
+
+            // update storage
+            data.owner = user;
+            
+            emit NftRegistered(user, tokenId);
+        }
+    }
+
+    /** 
+     * @notice Called by user to release unstaked NFTs on mainnet, by calling NftLocker
+     * @dev Max array length is 5, and txn reverts if any of the tokenIds are still attached to a vault
+     * @param tokenIds Destination chain's endpoint ID.
+     * @param dstEid Destination chain's endpoint ID.
+     * @param options Message execution options (e.g., gas to use on destination).
+     */
+    function release(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable {
+        uint256 length = tokenIds.length;
+        require(length <= 5, "Array max length exceeded");
+
+        for (uint256 i; i < length; ++i) {
+
+            uint256 tokenId = tokenIds[i];
+
+            // cache
+            TokenData memory data = nfts[tokenId];
+
+            // check ownership + staking status
+            require(data.owner == msg.sender, "Not Owner");
+            require(data.vaultId == bytes32(0), "Nft is staked");
+            
+            // update storage
+            delete nfts[tokenId];
+
+            emit NftReleased(msg.sender, tokenId);
+        }
+
+
+        // craft payload
+        bytes memory payload = abi.encode(msg.sender, tokenIds);
+
+        // check gas needed
+        MessagingFee memory fee = _quote(dstEid, payload, options, false);
+        require(msg.value >= fee.nativeFee, "Insufficient gas");
+
+        // refund excess
+        if(msg.value > fee.nativeFee) {
+            uint256 excessGas = msg.value - fee.nativeFee;
+
+            payable(msg.sender).transfer(excessGas);
+            fee.nativeFee -= excessGas; 
+        }
+
+        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
+
     }
     
-    // calls NftLocker on Ethereum. called by user
-    // releases NFT to owner on mainnet; if NFT is not staked
-    function release(uint256 tokenId, uint32 _dstEid, bytes calldata _options) external {
-        _release(msg.sender, tokenId, _dstEid, _options);
+    // admin to call release on a specific user in special cases 
+    // incase of issues with vault on pool contract
+    function safetyRelease(address onBehalfOf, uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable onlyOwner {
+        uint256 length = tokenIds.length;
+        require(length <= 5, "Array max length exceeded");
+
+        for (uint256 i; i < length; ++i) {
+
+            uint256 tokenId = tokenIds[i];
+
+            // cache
+            TokenData memory data = nfts[tokenId];
+            
+            //Note: should we drop this? 
+            // this assumes data was logged correctly on the inflow, but there were issues with the outflow
+            // specifically, with the pool contract.
+            require(data.owner == onBehalfOf, "Not Owner");
+
+            // update storage
+            delete nfts[tokenId];
+
+            emit NftReleased(onBehalfOf, tokenId);
+        }
+
+
+        // craft payload
+        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
+
+        // check gas needed
+        MessagingFee memory fee = _quote(dstEid, payload, options, false);
+        require(msg.value >= fee.nativeFee, "Insufficient gas");
+
+        // refund excess
+        if(msg.value > fee.nativeFee) {
+            uint256 excessGas = msg.value - fee.nativeFee;
+
+            payable(msg.sender).transfer(excessGas);
+            fee.nativeFee -= excessGas; 
+        }
+
+        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
+
+
     }
-    
-    // admin to call deregister on a specific user in special cases 
-    // note: can we drop this?
-    function release(address onBehalfOf, uint256 tokenId, uint32 _dstEid, bytes calldata _options) external onlyOwner {
-        _release(onBehalfOf, tokenId, _dstEid, _options);
-    }
 
-    // calls NftLocker on Ethereum.
-    function _release(address onBehalfOf, uint256 tokenId, uint32 dstEid, bytes calldata options) internal {
-        
-        // cache
-        TokenData memory data = tokenIds[tokenId];
-
-        // ensure tokenId does not belong to someone else
-        require(data.owner == onBehalfOf, "Incorrect tokenId");
-        // ensure NFT has not been staked
-        require(data.vaultId == bytes32(0), "Nft is staked");
-
-        // update storage
-        data.owner = address(0);
-        tokenIds[tokenId] = data;
-
-        emit NftReleased(onBehalfOf, tokenId);
-
-        // Encodes message as bytes
-        bytes memory payload = abi.encode(onBehalfOf, tokenId);
-        
-        //lz
-        _lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
-    }
 
 //-------------------------------------------------------------------------------------
 
@@ -102,7 +167,7 @@ contract NftRegistry is OApp {
         require(msg.sender == pool, "Only pool");
 
         // cache 
-        TokenData memory data = tokenIds[tokenId];
+        TokenData memory data = nfts[tokenId];
 
         // ensure tokenId does not belong to someone else
         require(data.owner == onBehalfOf, "Incorrect tokenId");
@@ -111,7 +176,7 @@ contract NftRegistry is OApp {
         
         // update storage
         data.vaultId = vaultId;
-        tokenIds[tokenId] = data;
+        nfts[tokenId] = data;
         
         emit NftStaked(onBehalfOf, tokenId, vaultId);
     }
@@ -121,7 +186,7 @@ contract NftRegistry is OApp {
         require(msg.sender == pool, "Only pool");
 
         // cache 
-        TokenData memory data = tokenIds[tokenId];
+        TokenData memory data = nfts[tokenId];
 
         // ensure tokenId does not belong to someone else
         require(data.owner == onBehalfOf, "Incorrect tokenId");
@@ -130,7 +195,7 @@ contract NftRegistry is OApp {
         
         // update storage
         delete data.vaultId;
-        tokenIds[tokenId] = data;
+        nfts[tokenId] = data;
         
         emit NftUnstaked(onBehalfOf, tokenId, vaultId);
     }
@@ -161,32 +226,31 @@ contract NftRegistry is OApp {
     }
 
 
-    /** Note: there exist lzReceive as public function that calls _lzReceive
-     * @param origin struct containing info about the message sender
-     * @param guid global packet identifier
+    /**
+     * @dev Override of _lzReceive internal fn in OAppReceiver.sol. 
+            The public fn lzReceive, handles param validation
      * @param payload message payload being received
-     * @param executor the Executor address.
-     * @param extraData arbitrary data appended by the Executor
      */
-    function _lzReceive(Origin calldata origin, bytes32 guid, bytes calldata payload, address executor, bytes calldata extraData) internal override {
+    function _lzReceive(Origin calldata, bytes32, bytes calldata payload, address, bytes calldata) internal override {
         
         // owner, tokendId
-        (address owner, uint256 tokenId) = abi.decode(payload, (address, uint256));
+        (address owner, uint256[] memory tokenIds) = abi.decode(payload, (address, uint256[]));
 
         // update
-        _register(owner, tokenId);
+        _register(owner, tokenIds);
     }
+
 
     /*//////////////////////////////////////////////////////////////
                                 GETTERS
     //////////////////////////////////////////////////////////////*/
 
     function getOwnerOf(uint256 tokenId) external view returns(address){
-        return tokenIds[tokenId].owner;
+        return nfts[tokenId].owner;
     }
 
     function getVaultId(uint256 tokenId) external view returns(bytes32){
-        return tokenIds[tokenId].vaultId;
+        return nfts[tokenId].vaultId;
     }
 }
 
