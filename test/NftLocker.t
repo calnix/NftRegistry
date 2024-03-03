@@ -36,7 +36,6 @@ abstract contract StateZero is Test {
         userB = makeAddr("userB");
         owner = makeAddr("owner");
 
-
         // contracts
 
         vm.startPrank(owner);
@@ -61,8 +60,6 @@ abstract contract StateZero is Test {
 
         vm.prank(userB);
         nft.mint(3);
-
-
     } 
 }
 
@@ -71,96 +68,36 @@ contract StateZeroTest is StateZero {
 
     function testLockerSetup() public {
         assert(address(nftLocker.MOCA_NFT()) == address(nft));
-        assert(nftLocker.router() == address(router));
-    }
-
-    function testRouterSetup() public {
-
-        assert(address(router.MOCA_NFT()) == address(nft));
-        assert(address(router.NFT_LOCKER()) == address(nftLocker));
-    }
-
-    function testUserCannotCallLock() public {
-        
-        vm.prank(userA);
-        vm.expectRevert(NftLocker.IncorrectCaller.selector);
-
-        bytes memory nullBytes = new bytes(0);
-        nftLocker.lock(userA, 1, 11, nullBytes);
-    }
-
-    function testUserCannotCallPoint() public {
-
-        vm.prank(userA);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
-
-        nftLocker.point(userA);
     }
 
     function testUserCannotCallUnlock() public {
-        vm.prank(userA);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
+        vm.prank(userB);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userB));
 
-        nftLocker.unlock(userB, 2);
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
+
+        nftLocker.unlock(userB, tokenIds);
     }
 
     function testUserCannotCallSend() public {
         vm.prank(userA);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
 
-        bytes memory nullBytes = new bytes(0);
-
-        nftLocker.send(11, 1, nullBytes, userA);
+        nftLocker.send(dstEid, "", "");
     }
 
-
-    function testOwnerCanCallLock() public {
-
-        vm.prank(userA);
-        nft.approve(address(nftLocker), 1);
-
-        vm.prank(owner);
+    function testUserCanLock() public {
         
-        nftLocker.lock(userA, 1, dstEid, "");
-        
-        // check assets
-        assertEq(nft.balanceOf(userA), 0);
-        assertEq(nft.balanceOf(address(nftLocker)), 1);
-        assert(nft.ownerOf(1) == address(nftLocker));
-
-        // check mapping
-        assert(nftLocker.tokenIds(1) == userA);
-    }
-
-    function testRouterCanCallLock() public {
-        vm.prank(userA);
-        nft.approve(address(nftLocker), 1);
-        
-        vm.prank(address(router));
-        
-        nftLocker.lock(userA, 1, dstEid, "");
-
-        // check assets
-        assertEq(nft.balanceOf(userA), 0);
-        assertEq(nft.balanceOf(address(nftLocker)), 1);
-        assert(nft.ownerOf(1) == address(nftLocker));
-
-        // check mapping
-        assert(nftLocker.tokenIds(1) == userA);
-    }
-
-    function testUserCanInteractThroughRouter() public {
-
-        bytes memory payload1 = abi.encodeWithSignature("lock(uint256,uint32,bytes)", 2, dstEid, "");
-        bytes memory payload2 = abi.encodeWithSignature("lock(uint256,uint32,bytes)", 3, dstEid, "");
-
-        bytes[] memory allCalls = new bytes[](2);
-        allCalls[0] = payload1;
-        allCalls[1] = payload2;
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
 
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
-        
+         nftLocker.lock(tokenIds, dstEid, "");
+
         vm.stopPrank();
 
         // check assets
@@ -170,12 +107,19 @@ contract StateZeroTest is StateZero {
         assert(nft.ownerOf(3) == address(nftLocker));
 
         // check mapping
-        assert(nftLocker.tokenIds(2) == userB);
-        assert(nftLocker.tokenIds(3) == userB);
-
+        assert(nftLocker.nfts(2) == userB);
+        assert(nftLocker.nfts(3) == userB);
     }
 
+    function testMaxArrayLimit() public {
 
+        uint256[] memory tokenIds = new uint256[](10);
+        
+        vm.prank(userB);
+        vm.expectRevert("Array max length exceeded");
+        nftLocker.lock(tokenIds, dstEid, "");
+    
+    }
 }
 
 // Note: userB locks both NFTs
@@ -184,18 +128,14 @@ abstract contract StateLocked is StateZero {
     function setUp() public virtual override {
         super.setUp();
 
-
-        bytes memory payload1 = abi.encodeWithSignature("lock(uint256,uint32,bytes)", 2, dstEid, "");
-        bytes memory payload2 = abi.encodeWithSignature("lock(uint256,uint32,bytes)", 3, dstEid, "");
-
-        bytes[] memory allCalls = new bytes[](2);
-        allCalls[0] = payload1;
-        allCalls[1] = payload2;
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
 
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
-         router.batch(allCalls);
-        
+         nftLocker.lock(tokenIds, dstEid, "");
+
         vm.stopPrank();
 
         // check assets
@@ -205,8 +145,8 @@ abstract contract StateLocked is StateZero {
         assert(nft.ownerOf(3) == address(nftLocker));
 
         // check mapping
-        assert(nftLocker.tokenIds(2) == userB);
-        assert(nftLocker.tokenIds(3) == userB);
+        assert(nftLocker.nfts(2) == userB);
+        assert(nftLocker.nfts(3) == userB);
 
     }
 }
@@ -215,15 +155,24 @@ contract StateLockedTest is StateLocked {
 
     function testOwnerCanCallUnlock() public {
         
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
+
         vm.prank(owner);
-        nftLocker.unlock(userB, 2);
+        nftLocker.unlock(userB, tokenIds);
+
 
         // check assets
-        assertEq(nft.balanceOf(userB), 1);
+        assertEq(nft.balanceOf(userB), 2);
+        assertEq(nft.balanceOf(address(nftLocker)), 0);
         assert(nft.ownerOf(2) == userB);
+        assert(nft.ownerOf(3) == userB);
 
         // check mapping
-        assert(nftLocker.tokenIds(2) == address(0));
+        assert(nftLocker.nfts(2) == address(0));
+        assert(nftLocker.nfts(3) == address(0));
+
     }
 
 

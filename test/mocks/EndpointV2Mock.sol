@@ -12,4 +12,8 @@ contract EndpointV2Mock {
         MessagingReceipt memory receipt;
         return receipt;
     }
+
+    function quote(MessagingParams memory messagingParams, address) public view returns (uint256, uint256) {
+        return (0, 0);
+    }
 }

@@ -10,8 +10,8 @@ contract NftRegistry is OApp {
     address public pool;
 
     struct TokenData {
-        bytes32 vaultId;         // non-zero value if staked
         address owner;
+        bytes32 vaultId;         // non-zero value if staked
     }
 
     mapping(uint256 tokenId => TokenData data) public nfts;
@@ -27,7 +27,7 @@ contract NftRegistry is OApp {
     event NftUnstaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
 
 //-------------------------------constructor-------------------------------------------
-    constructor(address _endpoint, address _owner, address pool_) OApp(_endpoint, _owner) Ownable(_owner) {
+    constructor(address endpoint, address owner, address pool_) OApp(endpoint, owner) Ownable(owner) {
         pool = pool_;
     }
 
@@ -52,6 +52,7 @@ contract NftRegistry is OApp {
 
             // update storage
             data.owner = user;
+            nfts[tokenId] = data;
             
             emit NftRegistered(user, tokenId);
         }
@@ -191,7 +192,7 @@ contract NftRegistry is OApp {
         // ensure tokenId does not belong to someone else
         require(data.owner == onBehalfOf, "Incorrect tokenId");
         // ensure correct vaultId
-        require(data.vaultId != vaultId, "Incorrect vaultId");
+        require(data.vaultId == vaultId, "Incorrect vaultId");
         
         // update storage
         delete data.vaultId;

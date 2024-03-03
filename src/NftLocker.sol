@@ -78,14 +78,21 @@ contract NftLocker is OApp {
     // admin can call unlock on a specific user in special cases
     // admin must ensure that in unlocking manually, Registry is updated as well 
     // this can be done via send() xchain msg or directly on the polygon contract
-    function unlock(address onBehalfOf, uint256 tokenId) external onlyOwner {
-        // delete tagged address
-        delete nfts[tokenId];
+    function unlock(address onBehalfOf, uint256[] calldata tokenIds) external onlyOwner {
 
-        emit NftUnlocked(onBehalfOf, tokenId);
+        uint256 length = tokenIds.length;
 
-        // return
-        MOCA_NFT.transferFrom(address(this), onBehalfOf, tokenId);
+        for (uint256 i; i < length; ++i) {
+            uint256 tokenId = tokenIds[i];
+
+            // delete tagged address
+            delete nfts[tokenId];
+
+            emit NftUnlocked(onBehalfOf, tokenId);
+
+            // return
+            MOCA_NFT.transferFrom(address(this), onBehalfOf, tokenId);
+        }
     }
 
 
@@ -131,9 +138,21 @@ contract NftLocker is OApp {
      */
     function send(uint32 dstEid, bytes memory payload, bytes calldata options) external payable onlyOwner {
         
+        // check gas needed
+        MessagingFee memory fee = _quote(dstEid, payload, options, false);
+        require(msg.value >= fee.nativeFee, "Insufficient gas");
+
+        // refund excess
+        if(msg.value > fee.nativeFee) {
+            uint256 excessGas = msg.value - fee.nativeFee;
+
+            payable(msg.sender).transfer(excessGas);
+            fee.nativeFee -= excessGas; 
+        }
+
         // MessagingFee: Fee struct containing native gas and ZRO token.
         // payable(msg.sender): The refund address in case the send call reverts.
-        _lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
+        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
     }
 
     /** 
