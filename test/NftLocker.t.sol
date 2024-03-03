@@ -82,10 +82,14 @@ contract StateZeroTest is StateZero {
     }
 
     function testUserCannotCallSend() public {
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 1;
+        
         vm.prank(userA);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
 
-        nftLocker.send(dstEid, "", "");
+        nftLocker.send(dstEid, userA, tokenIds, "");
     }
 
     function testUserCanLock() public {
@@ -118,7 +122,6 @@ contract StateZeroTest is StateZero {
         vm.prank(userB);
         vm.expectRevert("Array max length exceeded");
         nftLocker.lock(tokenIds, dstEid, "");
-    
     }
 }
 

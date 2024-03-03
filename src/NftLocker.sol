@@ -127,17 +127,17 @@ contract NftLocker is OApp {
                                   SEND
     //////////////////////////////////////////////////////////////*/
 
-    // Sends a message from the source to destination chain.
-    // For admin use only, in case of any hiccups.
-    // Note: considering restricting scope of use by specifying payload
     /** 
-     * @dev Quotes the gas needed to pay for the full omnichain transaction.
+     * @dev For admin use only, in case of any hiccups. Sends custom payload.
      * @param dstEid Destination chain's endpoint ID.
-     * @param payload Message payload
+     * @param onBehalfOf Target user's address
+     * @param tokenIds NFT token Ids
      * @param options Message execution options (e.g., gas to use on destination).
      */
-    function send(uint32 dstEid, bytes memory payload, bytes calldata options) external payable onlyOwner {
-        
+    function send(uint32 dstEid, address onBehalfOf, uint256[] memory tokenIds, bytes calldata options) external payable onlyOwner {
+
+        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
+
         // check gas needed
         MessagingFee memory fee = _quote(dstEid, payload, options, false);
         require(msg.value >= fee.nativeFee, "Insufficient gas");
@@ -177,8 +177,7 @@ contract NftLocker is OApp {
 
 
     /**
-     * @dev Override of _lzReceive internal fn in OAppReceiver.sol. 
-            The public fn lzReceive, handles param validation
+     * @dev Override of _lzReceive internal fn in OAppReceiver.sol. The public fn lzReceive, handles param validation.
      * @param payload message payload being received
      */
     function _lzReceive(Origin calldata, bytes32, bytes calldata payload, address, bytes calldata) internal override {

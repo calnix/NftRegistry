@@ -209,21 +209,31 @@ contract NftRegistry is OApp {
     //////////////////////////////////////////////////////////////*/
 
     /** 
-     * @dev Quotes the gas needed to pay for the full omnichain transaction.
-     * @param _dstEid Destination chain's endpoint ID.
-     * @param _options // Message execution options (e.g., gas to use on destination).
-     * @param onBehalfOf Nft owner address
-     * @param tokenId Nft tokenId
+     * @dev For admin use only, in case of any hiccups. Sends custom payload.
+     * @param dstEid Destination chain's endpoint ID.
+     * @param onBehalfOf Target user's address
+     * @param tokenIds NFT token Ids
+     * @param options Message execution options (e.g., gas to use on destination).
      */
-    function send(uint32 _dstEid, bytes calldata _options, address onBehalfOf, uint256 tokenId) external payable {
-        
-        // Encodes message as bytes
-        bytes memory _payload = abi.encode(onBehalfOf, tokenId);
+    function send(uint32 dstEid, address onBehalfOf, uint256[] memory tokenIds, bytes calldata options) external payable onlyOwner {
 
-        _lzSend(_dstEid, _payload, _options, 
-            MessagingFee(msg.value, 0),     // Fee struct containing native gas and ZRO token.
-            payable(msg.sender)             // The refund address in case the send call reverts.
-        );
+        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
+
+        // check gas needed
+        MessagingFee memory fee = _quote(dstEid, payload, options, false);
+        require(msg.value >= fee.nativeFee, "Insufficient gas");
+
+        // refund excess
+        if(msg.value > fee.nativeFee) {
+            uint256 excessGas = msg.value - fee.nativeFee;
+
+            payable(msg.sender).transfer(excessGas);
+            fee.nativeFee -= excessGas; 
+        }
+
+        // MessagingFee: Fee struct containing native gas and ZRO token.
+        // payable(msg.sender): The refund address in case the send call reverts.
+        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
     }
 
 

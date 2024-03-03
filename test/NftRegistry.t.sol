@@ -79,6 +79,17 @@ contract StateZeroTest is StateZero {
         assert(owner3 == userB);
     }
 
+    function testUserCannotCallSend() public {
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 0;
+        
+        vm.prank(userA);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
+
+        registry.send(dstEid, userA, tokenIds, "");
+    }
+
     function testUserCannotSetPool() public {
         vm.prank(userA);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
@@ -129,6 +140,15 @@ contract StateZeroTest is StateZero {
         assertEq(owner3, address(0));
     }
 
+    function testOwnerCanCallSend() public {
+        
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 0;
+        
+        vm.prank(owner);
+        registry.send(dstEid, userA, tokenIds, "");
+    }
+
     function testUserCanRelease() public {
         // check prior
         (address owner2, ) = registry.nfts(1);
@@ -165,6 +185,13 @@ contract StateZeroTest is StateZero {
 
     }
 
+    function testMaxArrayLimit() public {
+
+        uint256[] memory tokenIds = new uint256[](10);
+        
+        vm.expectRevert("Array max length exceeded");
+        registry.release(tokenIds, dstEid, "");
+    }
 
 }
 
