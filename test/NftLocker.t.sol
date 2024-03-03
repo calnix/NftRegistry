@@ -5,7 +5,7 @@ import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
 
 import {Router} from "./../src/Router.sol";
 import {NftLocker} from "./../src/NftLocker.sol";
-import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 // errors
 import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";

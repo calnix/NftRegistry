@@ -20,7 +20,7 @@ contract NftRegistry is OApp {
     event PoolUpdated(address indexed newPool);
     event LockerUpdated(address indexed newLocker);
 
-    event NftRegisted(address indexed user, uint256 indexed tokenId);
+    event NftRegistered(address indexed user, uint256 indexed tokenId);
     event NftReleased(address indexed user, uint256 indexed tokenId);
 
     event NftStaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
@@ -47,15 +47,17 @@ contract NftRegistry is OApp {
         // update storage
         data.owner = onBehalfOf;
         
-        emit NftRegisted(onBehalfOf, tokenId);
+        emit NftRegistered(onBehalfOf, tokenId);
     }
     
     // calls NftLocker on Ethereum. called by user
+    // releases NFT to owner on mainnet; if NFT is not staked
     function release(uint256 tokenId, uint32 _dstEid, bytes calldata _options) external {
         _release(msg.sender, tokenId, _dstEid, _options);
     }
     
     // admin to call deregister on a specific user in special cases 
+    // note: can we drop this?
     function release(address onBehalfOf, uint256 tokenId, uint32 _dstEid, bytes calldata _options) external onlyOwner {
         _release(onBehalfOf, tokenId, _dstEid, _options);
     }
