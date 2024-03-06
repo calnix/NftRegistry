@@ -1,0 +1,37 @@
+{
+  "transactions": [
+    {
+      "hash": "0xd3d229db61a3a1f355dda31295b5f57504b7a34c15775b5867f30b743923a966",
+      "transactionType": "CALL",
+      "contractName": "NftLocker",
+      "contractAddress": "0x30374A02D4547788003d8a4bD0863AD168cF5137",
+      "function": "setPeer(uint32,bytes32)",
+      "arguments": [
+        "40231",
+        "0x000000000000000000000000829c17addd2efbf11584317eeb4d967ecb39d4d4"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0xde05a1abb121113a33eed248bd91ddc254d5e9db",
+        "to": "0x30374a02d4547788003d8a4bd0863ad168cf5137",
+        "gas": "0x9e3c",
+        "value": "0x0",
+        "data": "0x3400288b0000000000000000000000000000000000000000000000000000000000009d27000000000000000000000000829c17addd2efbf11584317eeb4d967ecb39d4d4",
+        "nonce": "0x54",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0xd3d229db61a3a1f355dda31295b5f57504b7a34c15775b5867f30b743923a966"
+  ],
+  "returns": {},
+  "timestamp": 1709704733,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "0feae5e"
+}

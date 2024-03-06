@@ -2,9 +2,10 @@
 pragma solidity ^0.8.20;
 
 import { IERC721 } from "node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 import { OApp, Origin, MessagingFee } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { IOAppOptionsType3 } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
 
 contract NftLocker is OApp {
 
@@ -24,7 +25,7 @@ contract NftLocker is OApp {
 
 //-------------------------------constructor-------------------------------------------
 
-    constructor(address _endpoint, address _owner, address mocaNft) OApp(_endpoint, _owner) Ownable(_owner) {
+    constructor(address endpoint, address owner, address mocaNft) OApp(endpoint, owner) Ownable(owner) {
         
         MOCA_NFT = IERC721(mocaNft);
     }
@@ -35,7 +36,14 @@ contract NftLocker is OApp {
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
-
+    
+    /**
+     * @notice Lock NFTs into NFT locker - NFT registry on remote chain is updated via LayerZero call
+     * @dev A maximum of 5 tokenIds can be passed at once
+     * @param tokenIds Array of tokenIds to be locked
+     * @param dstEid Destination chainId as specified by LayerZero
+     * @param options Message execution options (e.g., gas to use on destination).
+     */
     function lock(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable {
         uint256 length = tokenIds.length;
         require(length <= 5, "Array max length exceeded");
