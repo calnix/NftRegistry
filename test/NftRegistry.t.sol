@@ -78,7 +78,7 @@ contract StateZeroTest is StateZero {
         (address owner3, ) = registry.nfts(2);
         assert(owner3 == userB);
     }
-
+/*
     function testUserCannotCallSend() public {
 
         uint256[] memory tokenIds = new uint256[](1);
@@ -89,13 +89,13 @@ contract StateZeroTest is StateZero {
 
         registry.send(dstEid, userA, tokenIds, "");
     }
-
+*/
     function testUserCannotSetPool() public {
         vm.prank(userA);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
         registry.setPool(userA);
     }
-
+/*
     function testUserCannotSafetyRelease() public {
 
         uint256[] memory tokenIdsB = new uint256[](2);
@@ -107,7 +107,7 @@ contract StateZeroTest is StateZero {
         registry.safetyRelease(userB, tokenIdsB, dstEid, "");
 
     }
-
+*/
     function testOwnerCanSetPool() public {
 
         vm.prank(owner);
@@ -115,7 +115,7 @@ contract StateZeroTest is StateZero {
 
         assertEq(registry.pool(), userA);
     }
-
+/*
     function testOwnerCanSafetyRelease() public {
         // check prior
         (address owner2, ) = registry.nfts(1);
@@ -148,7 +148,7 @@ contract StateZeroTest is StateZero {
         vm.prank(owner);
         registry.send(dstEid, userA, tokenIds, "");
     }
-
+*/
     function testUserCanRelease() public {
         // check prior
         (address owner2, ) = registry.nfts(1);

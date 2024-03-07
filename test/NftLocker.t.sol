@@ -3,19 +3,21 @@ pragma solidity ^0.8.13;
 
 import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
 
-import {NftLocker} from "./../src/NftLocker.sol";
-import {Ownable} from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { NftLocker } from "./../src/NftLocker.sol";
+import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Pausable } from "node_modules/@openzeppelin/contracts/utils/Pausable.sol";
 
 // errors
 import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";
 
 // mocks
-import {MockNft} from "./mocks/MockNft.sol";
-import {EndpointV2Mock} from "./mocks/EndpointV2Mock.sol";
+import { MockNft } from "./mocks/MockNft.sol";
+import { EndpointV2Mock } from "./mocks/EndpointV2Mock.sol";
 
 // SendParam
 import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+
 
 abstract contract StateZero is Test {
     using stdStorage for StdStorage;
@@ -29,6 +31,12 @@ abstract contract StateZero is Test {
     address public owner;
 
     uint32 public dstEid;
+
+    // events
+    event NftLocked(address indexed user, uint256 indexed tokenId);
+    event NftUnlocked(address indexed user, uint256 indexed tokenId);
+    event Recovered(address indexed nft, uint256 indexed tokenId, address indexed receiver);
+    event PoolFrozen(uint256 indexed timestamp);
 
     function setUp() public virtual {
         // users
@@ -63,33 +71,38 @@ abstract contract StateZero is Test {
     } 
 }
 
-
 contract StateZeroTest is StateZero {
 
     function testLockerSetup() public {
         assert(address(nftLocker.MOCA_NFT()) == address(nft));
     }
 
-    function testUserCannotCallUnlock() public {
+    function testUserCannotCallExit() public {
         vm.prank(userB);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userB));
-
+        vm.expectRevert(abi.encodeWithSelector(Pausable.ExpectedPause.selector));
+    
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = 2;
         tokenIds[1] = 3;
 
-        nftLocker.unlock(userB, tokenIds);
+        nftLocker.emergencyExit(tokenIds);
     }
 
-    function testUserCannotCallSend() public {
+    function testUserCannotCallFreeze() public {
 
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = 1;
-        
         vm.prank(userA);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
+        vm.expectRevert(abi.encodeWithSelector(Pausable.ExpectedPause.selector));
 
-        nftLocker.send(dstEid, userA, tokenIds, "");
+        nftLocker.freeze();
+    }
+
+    function testMaxArrayLimit() public {
+
+        uint256[] memory tokenIds = new uint256[](10);
+        
+        vm.prank(userB);
+        vm.expectRevert("Array max length exceeded");
+        nftLocker.lock(tokenIds, dstEid, "");
     }
 
     function testUserCanLock() public {
@@ -100,6 +113,13 @@ contract StateZeroTest is StateZero {
 
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
+                // check events
+                 vm.expectEmit(true, true, false, false);
+                emit NftLocked(userB, 2);
+
+                vm.expectEmit(true, true, false, false);
+                emit NftLocked(userB, 3);
+
          nftLocker.lock(tokenIds, dstEid, "");
 
         vm.stopPrank();
@@ -113,20 +133,13 @@ contract StateZeroTest is StateZero {
         // check mapping
         assert(nftLocker.nfts(2) == userB);
         assert(nftLocker.nfts(3) == userB);
+
     }
 
-    function testMaxArrayLimit() public {
-
-        uint256[] memory tokenIds = new uint256[](10);
-        
-        vm.prank(userB);
-        vm.expectRevert("Array max length exceeded");
-        nftLocker.lock(tokenIds, dstEid, "");
-    }
 }
 
-// Note: userB locks both NFTs
-abstract contract StateLocked is StateZero {
+// Note: userB locks both NFTs. Admin pauses thereafter.
+abstract contract StateLockedAndPaused is StateZero {
 
     function setUp() public virtual override {
         super.setUp();
@@ -151,20 +164,73 @@ abstract contract StateLocked is StateZero {
         assert(nftLocker.nfts(2) == userB);
         assert(nftLocker.nfts(3) == userB);
 
+        // admin pauses
+        vm.prank(owner);
+        nftLocker.pause();
+
     }
 }
 
-contract StateLockedTest is StateLocked {
+contract StateLockedAndPausedTest is StateLockedAndPaused {
 
-    function testOwnerCanCallUnlock() public {
+    function testUserCannotLock() public {
         
+        vm.prank(userA);
+        vm.expectRevert(abi.encodeWithSelector(Pausable.EnforcedPause.selector));
+
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = 2;
         tokenIds[1] = 3;
 
-        vm.prank(owner);
-        nftLocker.unlock(userB, tokenIds);
+        nftLocker.lock(tokenIds, dstEid, "");
+    }
 
+    function testUserCannotCallExit() public {
+        
+        assertEq(nftLocker.isFrozen(), false);
+
+        vm.prank(userB);
+        vm.expectRevert("Locker not frozen");
+    
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
+
+        nftLocker.emergencyExit(tokenIds);
+    }
+
+}
+
+
+// Note: Admin pauses freezes locker
+abstract contract StateFrozen is StateLockedAndPaused {
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        // admin freezes
+        vm.prank(owner);
+        nftLocker.freeze();
+    }
+}
+
+contract StateFrozenTest is StateFrozen {
+
+    function testUserCanExit() public {
+        vm.prank(userB);
+
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 3;
+
+            // check events
+            vm.expectEmit(true, true, false, false);
+            emit NftUnlocked(userB, 2);
+
+            vm.expectEmit(true, true, false, false);
+            emit NftUnlocked(userB, 3);
+
+        nftLocker.emergencyExit(tokenIds);
 
         // check assets
         assertEq(nft.balanceOf(userB), 2);
@@ -175,10 +241,5 @@ contract StateLockedTest is StateLocked {
         // check mapping
         assert(nftLocker.nfts(2) == address(0));
         assert(nftLocker.nfts(3) == address(0));
-
     }
-
-
 }
-
-

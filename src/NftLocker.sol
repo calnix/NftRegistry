@@ -3,13 +3,14 @@ pragma solidity ^0.8.20;
 
 import { IERC721 } from "node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Pausable } from "node_modules/@openzeppelin/contracts/utils/Pausable.sol";
 
 import { OApp, Origin, MessagingFee } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 import { IOAppOptionsType3 } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
 
-contract NftLocker is OApp {
-
-    address public router;
+contract NftLocker is OApp, Pausable {
+    
+    bool public isFrozen;
     IERC721 public immutable MOCA_NFT;
 
     // locked nfts are assigned to the user's address
@@ -19,6 +20,7 @@ contract NftLocker is OApp {
     event NftLocked(address indexed user, uint256 indexed tokenId);
     event NftUnlocked(address indexed user, uint256 indexed tokenId);
     event Recovered(address indexed nft, uint256 indexed tokenId, address indexed receiver);
+    event PoolFrozen(uint256 indexed timestamp);
 
     // errors
     error IncorrectCaller();
@@ -44,7 +46,7 @@ contract NftLocker is OApp {
      * @param dstEid Destination chainId as specified by LayerZero
      * @param options Message execution options (e.g., gas to use on destination).
      */
-    function lock(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable {
+    function lock(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external whenNotPaused payable {
         uint256 length = tokenIds.length;
         require(length <= 5, "Array max length exceeded");
 
@@ -82,26 +84,48 @@ contract NftLocker is OApp {
 
     }
 
+    /**
+     * @notice Users can extract their NFTs in case of emergency and locker is frozed
+     * @dev Locker must be both paused and frozen
+     * @param tokenIds Array of tokenIds to be unlocked
+     */
+    function emergencyExit(uint256[] calldata tokenIds) external whenPaused {
+        require(isFrozen == true, "Locker not frozen");
 
-    // admin can call unlock on a specific user in special cases
-    // admin must ensure that in unlocking manually, Registry is updated as well 
-    // this can be done via send() xchain msg or directly on the polygon contract
-    function unlock(address onBehalfOf, uint256[] calldata tokenIds) external onlyOwner {
-
-        uint256 length = tokenIds.length;
-
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = tokenIds[i];
-
-            // delete tagged address
-            delete nfts[tokenId];
-
-            emit NftUnlocked(onBehalfOf, tokenId);
-
-            // return
-            MOCA_NFT.transferFrom(address(this), onBehalfOf, tokenId);
-        }
+        _unlock(msg.sender, tokenIds);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                                 ADMIN
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Pause pool
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause pool
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+    
+    /**
+     * @notice To freeze the locker in the event of something untoward occuring.
+     * @dev Only callable from a paused state, affirming that operation should not resume.
+     *      Nothing to be updated. Freeze as is.
+            Enables emergencyExit() to be called.
+     */
+    function freeze() external whenPaused onlyOwner {
+        require(isFrozen == false, "Pool is frozen");
+        
+        isFrozen = true;
+        emit PoolFrozen(block.timestamp);
+    }
+
 
 
     /*//////////////////////////////////////////////////////////////
@@ -129,39 +153,7 @@ contract NftLocker is OApp {
     }
 
 
-//----------------------------- LZ FNs ---------------------------------------------------        
-
-    /*//////////////////////////////////////////////////////////////
-                                  SEND
-    //////////////////////////////////////////////////////////////*/
-
-    /** 
-     * @dev For admin use only, in case of any hiccups. Sends custom payload.
-     * @param dstEid Destination chain's endpoint ID.
-     * @param onBehalfOf Target user's address
-     * @param tokenIds NFT token Ids
-     * @param options Message execution options (e.g., gas to use on destination).
-     */
-    function send(uint32 dstEid, address onBehalfOf, uint256[] memory tokenIds, bytes calldata options) external payable onlyOwner {
-
-        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
-
-        // check gas needed
-        MessagingFee memory fee = _quote(dstEid, payload, options, false);
-        require(msg.value >= fee.nativeFee, "Insufficient gas");
-
-        // refund excess
-        if(msg.value > fee.nativeFee) {
-            uint256 excessGas = msg.value - fee.nativeFee;
-
-            payable(msg.sender).transfer(excessGas);
-            fee.nativeFee -= excessGas; 
-        }
-
-        // MessagingFee: Fee struct containing native gas and ZRO token.
-        // payable(msg.sender): The refund address in case the send call reverts.
-        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
-    }
+//----------------------------- LayerZero ---------------------------------------------------        
 
     /** 
      * @dev Quotes the gas needed to pay for the full omnichain transaction.
@@ -179,11 +171,6 @@ contract NftLocker is OApp {
     }
 
 
-    /*//////////////////////////////////////////////////////////////
-                                RECEIVE
-    //////////////////////////////////////////////////////////////*/
-
-
     /**
      * @dev Override of _lzReceive internal fn in OAppReceiver.sol. The public fn lzReceive, handles param validation.
      * @param payload message payload being received
@@ -195,7 +182,6 @@ contract NftLocker is OApp {
 
         _unlock(owner, tokenIds);
     }
-
 
 }
 

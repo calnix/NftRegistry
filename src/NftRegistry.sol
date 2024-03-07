@@ -108,51 +108,6 @@ contract NftRegistry is OApp {
 
     }
     
-    // admin to call release on a specific user in special cases 
-    // incase of issues with vault on pool contract
-    function safetyRelease(address onBehalfOf, uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable onlyOwner {
-        uint256 length = tokenIds.length;
-        require(length <= 5, "Array max length exceeded");
-
-        for (uint256 i; i < length; ++i) {
-
-            uint256 tokenId = tokenIds[i];
-
-            // cache
-            TokenData memory data = nfts[tokenId];
-            
-            //Note: should we drop this? 
-            // this assumes data was logged correctly on the inflow, but there were issues with the outflow
-            // specifically, with the pool contract.
-            require(data.owner == onBehalfOf, "Not Owner");
-
-            // update storage
-            delete nfts[tokenId];
-
-            emit NftReleased(onBehalfOf, tokenId);
-        }
-
-
-        // craft payload
-        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
-
-        // check gas needed
-        MessagingFee memory fee = _quote(dstEid, payload, options, false);
-        require(msg.value >= fee.nativeFee, "Insufficient gas");
-
-        // refund excess
-        if(msg.value > fee.nativeFee) {
-            uint256 excessGas = msg.value - fee.nativeFee;
-
-            payable(msg.sender).transfer(excessGas);
-            fee.nativeFee -= excessGas; 
-        }
-
-        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
-
-
-    }
-
 
 //-------------------------------------------------------------------------------------
 
@@ -211,31 +166,18 @@ contract NftRegistry is OApp {
     //////////////////////////////////////////////////////////////*/
 
     /** 
-     * @dev For admin use only, in case of any hiccups. Sends custom payload.
+     * @dev Quotes the gas needed to pay for the full omnichain transaction.
      * @param dstEid Destination chain's endpoint ID.
-     * @param onBehalfOf Target user's address
-     * @param tokenIds NFT token Ids
-     * @param options Message execution options (e.g., gas to use on destination).
+     * @param payload The message payload.
+     * @param options Message execution options
+     * @param payInLzToken boolean for which token to return fee in
+     * @return nativeFee Estimated gas fee in native gas.
+     * @return lzTokenFee Estimated gas fee in ZRO token.
      */
-    function send(uint32 dstEid, address onBehalfOf, uint256[] memory tokenIds, bytes calldata options) external payable onlyOwner {
-
-        bytes memory payload = abi.encode(onBehalfOf, tokenIds);
-
-        // check gas needed
-        MessagingFee memory fee = _quote(dstEid, payload, options, false);
-        require(msg.value >= fee.nativeFee, "Insufficient gas");
-
-        // refund excess
-        if(msg.value > fee.nativeFee) {
-            uint256 excessGas = msg.value - fee.nativeFee;
-
-            payable(msg.sender).transfer(excessGas);
-            fee.nativeFee -= excessGas; 
-        }
-
-        // MessagingFee: Fee struct containing native gas and ZRO token.
-        // payable(msg.sender): The refund address in case the send call reverts.
-        _lzSend(dstEid, payload, options, fee, payable(msg.sender));
+    function quote(uint32 dstEid, bytes calldata payload, bytes calldata options, bool payInLzToken) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
+        
+        MessagingFee memory fee = _quote(dstEid, payload, options, payInLzToken);
+        return (fee.nativeFee, fee.lzTokenFee);
     }
 
 
@@ -254,53 +196,5 @@ contract NftRegistry is OApp {
     }
 
 
-    /*//////////////////////////////////////////////////////////////
-                                GETTERS
-    //////////////////////////////////////////////////////////////*/
-
-    function getOwnerOf(uint256 tokenId) external view returns(address){
-        return nfts[tokenId].owner;
-    }
-
-    function getVaultId(uint256 tokenId) external view returns(bytes32){
-        return nfts[tokenId].vaultId;
-    }
 }
 
-
-
-
-
-
-
-
-/**
-1) NFT registry does not issue erc20 token.
-    no. of nfts per user recorded in mapping
-    when user wishes to stake nft, router calls registry to check if there are available nfts
-    Once an nft is staked, registry must be updated by the stakingPool, to "lock" nfts
-     increment lockAmount
-     decrement availableAmount
-
-Since no tokens are used in this approach, users will not be able to "see" anything
-in their metamask wallet
-
-2) NFT registry issues erc20 token.
-    On locking the nFT on mainnet, registry issues bridgedNftToken to user, on polygon
-    user can stake bridgedNFTToken into stakingPool
-    on staking, user transfers bridgedNftToken to pool, and receives stkNftToken.
-
-    This means tt while registry can inherit bridgedNFTToken.
-    We will need a standalone erc20 token contract for stkNftToken.
-    stakinPool cannot inherit this, since it already inherits stkMocaToken.
-
-    registry mints user bridgedNFTToken
-    bridgedNFTToken transferred to stakingPool
-    - bridgedNFTToken must be freely mint/burn and transferable
-
-    stakinPool mints/burns stkNftToken
-    - stkNftToken can be non-transferable.
-
-bridgedNFTToken will need to be ERC20Permit, for gassless transfer on staking.
-
- */

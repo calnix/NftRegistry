@@ -84,17 +84,12 @@ contract DeployRemote is LZState {
 
 // forge script script/Deploy.s.sol:DeployRemote --rpc-url arbitrum_sepolia --broadcast --verify -vvvv --etherscan-api-key arbitrum_sepolia
 
-/**
-mockNft = https://sepolia.etherscan.io/address/0xa3fc3b89cc2ec5b011e99696466a0ec1829b9885
-locker =  https://sepolia.etherscan.io/address/0x30374a02d4547788003d8a4bd0863ad168cf5137
-registry = : https://sepolia.arbiscan.io/address/0x829c17addd2efbf11584317eeb4d967ecb39d4d4
-*/
 
 abstract contract State is LZState {
 
-    address public mockNftAddress = 0xa3Fc3B89cC2ec5b011E99696466A0eC1829b9885;
-    address public nftLockerAddress = 0x30374A02D4547788003d8a4bD0863AD168cF5137;
-    address public nftRegistryAddress = 0x829c17ADDd2EFBF11584317EEb4D967ECb39D4d4;
+    address public mockNftAddress = 0x3E0aC7568a5441D113518Aa283da106402326cd6;
+    address public nftLockerAddress = 0x0F33605f68710ECd2057b6fC4121cAabDc33da61;
+    address public nftRegistryAddress = 0x49638a30bA51161edc5a8548b7698FD65b469418;
 
     MockNft public mockNft = MockNft(mockNftAddress);
     NftLocker public nftLocker = NftLocker(nftLockerAddress);
@@ -184,7 +179,7 @@ contract LockNFT is State {
     function run() public broadcast {
         
         // mint + approve
-        uint256 tokenId = 0;
+        uint256 tokenId = 0;        
         mockNft.mint(tokenId);
         mockNft.setApprovalForAll(address(nftLocker), true);
         
@@ -199,7 +194,7 @@ contract LockNFT is State {
 
         // options
         bytes memory options = hex"00030100110100000000000000000000000000030d40";
-
+        
         (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(remoteChainID, payload, options, false);
 
         nftLocker.lock{value: nativeFee}(tokenIds, remoteChainID, options);
@@ -215,3 +210,28 @@ Note:
   is it because we did not set enforced options?
 
  */
+
+ contract ReleaseNFT is State {
+
+    function run() public broadcast {
+        
+        uint256 tokenId = 0;
+
+        // array
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        // craft payload
+        bytes memory nullBytes = new bytes(0);
+        bytes memory payload = abi.encode(wallet, tokenIds);
+
+        // options
+        bytes memory options = hex"00030100110100000000000000000000000000030d40";
+        
+        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(homeChainID, payload, options, false);
+
+        nftRegistry.release{value: nativeFee}(tokenIds, homeChainID, options);
+    }
+ }
+
+// forge script script/Deploy.s.sol:ReleaseNFT --rpc-url arbitrum_sepolia --broadcast -vvvv
