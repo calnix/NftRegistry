@@ -133,9 +133,9 @@ contract SetRemoteOnAway is State {
 
 // ------------------------------------------- Gas Limits -------------------------
 
-/*
-import { IOAppOptionsType3, EnforcedOptionParam } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
 
+import { IOAppOptionsType3, EnforcedOptionParam } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
+/*
 contract SetGasLimitsHome is LZState {
 
     function run() public broadcast {
@@ -196,10 +196,22 @@ contract LockNFT is State {
         // craft payload
         bytes memory nullBytes = new bytes(0);
         bytes memory payload = abi.encode(wallet, tokenIds);
-        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(remoteChainID, payload, "", false);
 
-        nftLocker.lock{value: nativeFee}(tokenIds, remoteChainID, "");
+        // options
+        bytes memory options = hex"00030100110100000000000000000000000000030d40";
+
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(remoteChainID, payload, options, false);
+
+        nftLocker.lock{value: nativeFee}(tokenIds, remoteChainID, options);
     }
 }
 
 // forge script script/Deploy.s.sol:LockNFT --rpc-url sepolia --broadcast -vvvv
+
+/**
+Note:
+
+ Must pass options as part of quote, to get a valid quote.
+  is it because we did not set enforced options?
+
+ */
