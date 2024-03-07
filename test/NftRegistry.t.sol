@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
+import { Test, console2, stdStorage, StdStorage } from "forge-std/Test.sol";
 
-import {Ownable} from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Pausable } from "node_modules/@openzeppelin/contracts/utils/Pausable.sol";
 
 // mocks
-import {MockRegistry} from "./mocks/MockRegistry.sol";
-import {EndpointV2Mock} from "./mocks/EndpointV2Mock.sol";
+import { MockRegistry } from "./mocks/MockRegistry.sol";
+import { EndpointV2Mock } from "./mocks/EndpointV2Mock.sol";
 
 // SendParam
 import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
@@ -50,7 +51,6 @@ abstract contract StateZero is Test {
 
         vm.stopPrank();
 
-        //..... edit storage of registry
         // userA has 1 nft: tokenId = 0
         uint256[] memory tokenIdsA = new uint256[](1);
         tokenIdsA[0] = 0;
@@ -78,36 +78,13 @@ contract StateZeroTest is StateZero {
         (address owner3, ) = registry.nfts(2);
         assert(owner3 == userB);
     }
-/*
-    function testUserCannotCallSend() public {
 
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = 0;
-        
-        vm.prank(userA);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
-
-        registry.send(dstEid, userA, tokenIds, "");
-    }
-*/
     function testUserCannotSetPool() public {
         vm.prank(userA);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
         registry.setPool(userA);
     }
-/*
-    function testUserCannotSafetyRelease() public {
 
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;
-
-        vm.prank(userA);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
-        registry.safetyRelease(userB, tokenIdsB, dstEid, "");
-
-    }
-*/
     function testOwnerCanSetPool() public {
 
         vm.prank(owner);
@@ -115,40 +92,7 @@ contract StateZeroTest is StateZero {
 
         assertEq(registry.pool(), userA);
     }
-/*
-    function testOwnerCanSafetyRelease() public {
-        // check prior
-        (address owner2, ) = registry.nfts(1);
-        assert(owner2 == userB);
 
-        (address owner3, ) = registry.nfts(2);
-        assert(owner3 == userB);
-
-
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;
-
-        vm.prank(owner);
-        registry.safetyRelease(userB, tokenIdsB, dstEid, "");
-
-        // check mapping after
-        (owner2, ) = registry.nfts(1);
-        (owner3, ) = registry.nfts(2);
-
-        assertEq(owner2, address(0));
-        assertEq(owner3, address(0));
-    }
-
-    function testOwnerCanCallSend() public {
-        
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = 0;
-        
-        vm.prank(owner);
-        registry.send(dstEid, userA, tokenIds, "");
-    }
-*/
     function testUserCanRelease() public {
         // check prior
         (address owner2, ) = registry.nfts(1);
