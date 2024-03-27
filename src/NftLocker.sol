@@ -2,15 +2,18 @@
 pragma solidity ^0.8.20;
 
 import { IERC721 } from "node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import { Pausable } from "node_modules/@openzeppelin/contracts/utils/Pausable.sol";
+import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import { OApp, Origin, MessagingFee } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { IOAppOptionsType3 } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
+import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
-contract NftLocker is OApp, Pausable {
-    
+contract NftLocker is OApp, Pausable, Ownable2Step {
+    using OptionsBuilder for bytes;
+
     bool public isFrozen;
+    uint32 public immutable dstEid;
     IERC721 public immutable MOCA_NFT;
 
     // locked nfts are assigned to the user's address
@@ -25,7 +28,6 @@ contract NftLocker is OApp, Pausable {
     // errors
     error IncorrectCaller();
 
-//-------------------------------constructor-------------------------------------------
 
     constructor(address endpoint, address owner, address mocaNft) OApp(endpoint, owner) Ownable(owner) {
         
@@ -33,8 +35,6 @@ contract NftLocker is OApp, Pausable {
     }
 
    
-//-------------------------------------------------------------------------------------
-
     /*//////////////////////////////////////////////////////////////
                                 EXTERNAL
     //////////////////////////////////////////////////////////////*/
@@ -43,11 +43,10 @@ contract NftLocker is OApp, Pausable {
      * @notice Lock NFTs into NFT locker - NFT registry on remote chain is updated via LayerZero call
      * @dev A maximum of 5 tokenIds can be passed at once
      * @param tokenIds Array of tokenIds to be locked
-     * @param dstEid Destination chainId as specified by LayerZero
-     * @param options Message execution options (e.g., gas to use on destination).
      */
-    function lock(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external whenNotPaused payable {
+    function lock(uint256[] calldata tokenIds) external whenNotPaused payable {
         uint256 length = tokenIds.length;
+        require(length > 0, "Empty array");
         require(length <= 5, "Array max length exceeded");
 
         for (uint256 i; i < length; ++i) {
@@ -62,6 +61,16 @@ contract NftLocker is OApp, Pausable {
             // grab
             MOCA_NFT.transferFrom(msg.sender, address(this), tokenId);
         }
+
+        // if tokenIds.length = 1
+        uint256 baseGas = 51_950;
+        // gas multiplier
+        uint256 gasMultiplier = 26_600 * (length - 1);
+        uint256 totalGas = baseGas + gasMultiplier;
+
+        // create options
+        bytes memory options;
+        options = OptionsBuilder.newOptions().addExecutorLzReceiveOption({_gas: uint128(totalGas), _value: 0});
         
         // craft payload
         bytes memory payload = abi.encode(msg.sender, tokenIds);
@@ -69,14 +78,6 @@ contract NftLocker is OApp, Pausable {
         // check gas needed
         MessagingFee memory fee = _quote(dstEid, payload, options, false);
         require(msg.value >= fee.nativeFee, "Insufficient gas");
-
-        // refund excess
-        if(msg.value > fee.nativeFee) {
-            uint256 excessGas = msg.value - fee.nativeFee;
-
-            payable(msg.sender).transfer(excessGas);
-            fee.nativeFee -= excessGas; 
-        }
 
         // MessagingFee: Fee struct containing native gas and ZRO token.
         // returns MessagingReceipt struct
@@ -90,7 +91,8 @@ contract NftLocker is OApp, Pausable {
      * @param tokenIds Array of tokenIds to be unlocked
      */
     function emergencyExit(uint256[] calldata tokenIds) external whenPaused {
-        require(isFrozen == true, "Locker not frozen");
+        require(isFrozen, "Locker not frozen");
+        require(tokenIds.length > 0, "Empty array");
 
         _unlock(msg.sender, tokenIds);
     }
@@ -102,14 +104,15 @@ contract NftLocker is OApp, Pausable {
     /**
      * @notice Pause pool
      */
-    function pause() external onlyOwner {
+    function pause() external onlyOwner whenNotPaused {
         _pause();
     }
 
     /**
      * @notice Unpause pool
      */
-    function unpause() external onlyOwner {
+    function unpause() external onlyOwner whenPaused {
+        require(isFrozen == false, "Locker is frozen");
         _unpause();
     }
     
@@ -120,13 +123,11 @@ contract NftLocker is OApp, Pausable {
             Enables emergencyExit() to be called.
      */
     function freeze() external whenPaused onlyOwner {
-        require(isFrozen == false, "Pool is frozen");
+        require(isFrozen == false, "Locker is frozen");
         
         isFrozen = true;
         emit PoolFrozen(block.timestamp);
     }
-
-
 
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
@@ -152,24 +153,41 @@ contract NftLocker is OApp, Pausable {
         }
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              OWNABLE2STEP
+    //////////////////////////////////////////////////////////////*/
 
-//----------------------------- LayerZero ---------------------------------------------------        
+    /**
+     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) onlyOwner {
+        Ownable2Step.transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
+        Ownable2Step._transferOwnership(newOwner);
+    }
+
+
+    /*//////////////////////////////////////////////////////////////
+                               LAYERZERO
+    //////////////////////////////////////////////////////////////*/
 
     /** 
      * @dev Quotes the gas needed to pay for the full omnichain transaction.
-     * @param dstEid Destination chain's endpoint ID.
      * @param payload The message payload.
      * @param options Message execution options
-     * @param payInLzToken boolean for which token to return fee in
-     * @return nativeFee Estimated gas fee in native gas.
-     * @return lzTokenFee Estimated gas fee in ZRO token.
      */
-    function quote(uint32 dstEid, bytes calldata payload, bytes calldata options, bool payInLzToken) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
+    function quote(bytes calldata payload, bytes calldata options) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
         
-        MessagingFee memory fee = _quote(dstEid, payload, options, payInLzToken);
+        MessagingFee memory fee = _quote(dstEid, payload, options, false);
         return (fee.nativeFee, fee.lzTokenFee);
     }
-
 
     /**
      * @dev Override of _lzReceive internal fn in OAppReceiver.sol. The public fn lzReceive, handles param validation.

@@ -195,7 +195,7 @@ contract LockNFT is State {
         // options
         bytes memory options = hex"00030100110100000000000000000000000000030d40";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(remoteChainID, payload, options, false);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options, false);
 
         nftLocker.lock{value: nativeFee}(tokenIds, remoteChainID, options);
     }

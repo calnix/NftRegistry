@@ -2,12 +2,17 @@
 pragma solidity ^0.8.20;
 
 import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import { OApp, Origin, MessagingFee } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { IOAppOptionsType3 } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
+import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
 // issues
-contract NftRegistry is OApp {
+contract NftRegistry is OApp, Ownable2Step {
+    using OptionsBuilder for bytes;
+   
+    // Chain id of locker contract 
+    uint32 public immutable dstEid;
 
     address public pool;
 
@@ -29,16 +34,17 @@ contract NftRegistry is OApp {
     event NftUnstaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
 
 //-------------------------------constructor-------------------------------------------
-    constructor(address endpoint, address owner, address pool_) OApp(endpoint, owner) Ownable(owner) {
+    constructor(address endpoint, address owner, address pool_, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
         pool = pool_;
+        dstEid = dstEid_;
     }
+
 
     /*//////////////////////////////////////////////////////////////
                                  LOCKER
     //////////////////////////////////////////////////////////////*/
 
     // only callable by _lzReceive
-    //Note: if revert: storage must be modified by admin on Locker 
     function _register(address user, uint256[] memory tokenIds) internal {
 
         uint256 length = tokenIds.length;
@@ -63,12 +69,13 @@ contract NftRegistry is OApp {
     /** 
      * @notice Called by user to release unstaked NFTs on mainnet, by calling NftLocker
      * @dev Max array length is 5, and txn reverts if any of the tokenIds are still attached to a vault
+     * @dev msg.value check is handled by _payNative() in OAppSender.sol
+     *      it is a strict equality check. excess gas cannot be sent.
      * @param tokenIds Destination chain's endpoint ID.
-     * @param dstEid Destination chain's endpoint ID.
-     * @param options Message execution options (e.g., gas to use on destination).
      */
-    function release(uint256[] calldata tokenIds, uint32 dstEid, bytes calldata options) external payable {
+    function release(uint256[] calldata tokenIds) external payable {
         uint256 length = tokenIds.length;
+        require(length > 0, "Empty array");
         require(length <= 5, "Array max length exceeded");
 
         for (uint256 i; i < length; ++i) {
@@ -88,28 +95,25 @@ contract NftRegistry is OApp {
             emit NftReleased(msg.sender, tokenId);
         }
 
+        // if tokenIds.length = 1
+        uint256 baseGas = 73_000;
+        // gas multiplier
+        uint256 gasMultiplier = 18_403 * (length - 1);
+        uint256 totalGas = baseGas + gasMultiplier;
+
+        // create options
+        bytes memory options;
+        options = OptionsBuilder.newOptions().addExecutorLzReceiveOption({_gas: uint128(totalGas), _value: 0});  
 
         // craft payload
         bytes memory payload = abi.encode(msg.sender, tokenIds);
 
-        // check gas needed
+        // get updated quote
         MessagingFee memory fee = _quote(dstEid, payload, options, false);
-        require(msg.value >= fee.nativeFee, "Insufficient gas");
-
-        // refund excess
-        if(msg.value > fee.nativeFee) {
-            uint256 excessGas = msg.value - fee.nativeFee;
-
-            payable(msg.sender).transfer(excessGas);
-            fee.nativeFee -= excessGas; 
-        }
 
         _lzSend(dstEid, payload, options, fee, payable(msg.sender));
-
     }
     
-
-//-------------------------------------------------------------------------------------
 
     /*//////////////////////////////////////////////////////////////
                                   POOL
@@ -158,7 +162,26 @@ contract NftRegistry is OApp {
         emit NftUnstaked(onBehalfOf, tokenId, vaultId);
     }
 
-//-------------------------------------------------------------------------------------
+    
+    /*//////////////////////////////////////////////////////////////
+                              OWNABLE2STEP
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) onlyOwner {
+        Ownable2Step.transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
+        Ownable2Step._transferOwnership(newOwner);
+    }
 
 
     /*//////////////////////////////////////////////////////////////
@@ -167,14 +190,13 @@ contract NftRegistry is OApp {
 
     /** 
      * @dev Quotes the gas needed to pay for the full omnichain transaction.
-     * @param dstEid Destination chain's endpoint ID.
      * @param payload The message payload.
      * @param options Message execution options
      * @param payInLzToken boolean for which token to return fee in
      * @return nativeFee Estimated gas fee in native gas.
      * @return lzTokenFee Estimated gas fee in ZRO token.
      */
-    function quote(uint32 dstEid, bytes calldata payload, bytes calldata options, bool payInLzToken) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
+    function quote(bytes calldata payload, bytes calldata options, bool payInLzToken) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
         
         MessagingFee memory fee = _quote(dstEid, payload, options, payInLzToken);
         return (fee.nativeFee, fee.lzTokenFee);
