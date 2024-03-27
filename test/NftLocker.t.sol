@@ -31,7 +31,7 @@ abstract contract StateZero is Test {
     address public userC;
     address public owner;
 
-    uint32 public dstEid;
+    uint32 public dstEid = 1;
 
     // events
     event NftLocked(address indexed user, uint256 indexed tokenId);
@@ -54,7 +54,7 @@ abstract contract StateZero is Test {
         nft.initialize("mockNft", "mockNft");
 
         lzMock = new EndpointV2Mock();
-        nftLocker = new NftLocker(address(lzMock), owner, address(nft));
+        nftLocker = new NftLocker(address(lzMock), owner, address(nft), dstEid);
         vm.label(address(nftLocker), "locker");
 
         //setUp Oapp

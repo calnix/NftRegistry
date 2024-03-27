@@ -20,8 +20,8 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     mapping(uint256 tokenId => address user) public nfts;
 
     // events
-    event NftLocked(address indexed user, uint256 indexed tokenId);
-    event NftUnlocked(address indexed user, uint256 indexed tokenId);
+    event NftLocked(address indexed user, uint256[] indexed tokenIds);
+    event NftUnlocked(address indexed user, uint256[] indexed tokenIds);
     event Recovered(address indexed nft, uint256 indexed tokenId, address indexed receiver);
     event PoolFrozen(uint256 indexed timestamp);
 
@@ -29,9 +29,10 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     error IncorrectCaller();
 
 
-    constructor(address endpoint, address owner, address mocaNft) OApp(endpoint, owner) Ownable(owner) {
+    constructor(address endpoint, address owner, address mocaNft, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
         
         MOCA_NFT = IERC721(mocaNft);
+        dstEid = dstEid_;
     }
 
    
@@ -56,11 +57,12 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
             
             // update
             nfts[tokenId] = msg.sender;
-            emit NftLocked(msg.sender, tokenId);
 
             // grab
             MOCA_NFT.transferFrom(msg.sender, address(this), tokenId);
         }
+
+        emit NftLocked(msg.sender, tokenIds);
 
         // if tokenIds.length = 1
         uint256 baseGas = 51_950;
@@ -82,7 +84,6 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
         // MessagingFee: Fee struct containing native gas and ZRO token.
         // returns MessagingReceipt struct
         _lzSend(dstEid, payload, options, fee, payable(msg.sender));
-
     }
 
     /**
@@ -146,11 +147,11 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
             // delete tagged address
             delete nfts[tokenId];
 
-            emit NftUnlocked(user, tokenId);
-
             // return
             MOCA_NFT.transferFrom(address(this), user, tokenId);
         }
+
+        emit NftUnlocked(user, tokenIds);
     }
 
     /*//////////////////////////////////////////////////////////////

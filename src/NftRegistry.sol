@@ -27,8 +27,8 @@ contract NftRegistry is OApp, Ownable2Step {
     event PoolUpdated(address indexed newPool);
     event LockerUpdated(address indexed newLocker);
 
-    event NftRegistered(address indexed user, uint256 indexed tokenId);
-    event NftReleased(address indexed user, uint256 indexed tokenId);
+    event NftRegistered(address indexed user, uint256[] indexed tokenIds);
+    event NftReleased(address indexed user, uint256[] indexed tokenIds);
 
     event NftStaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
     event NftUnstaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
@@ -60,10 +60,10 @@ contract NftRegistry is OApp, Ownable2Step {
 
             // update storage
             data.owner = user;
-            nfts[tokenId] = data;
-            
-            emit NftRegistered(user, tokenId);
+            nfts[tokenId] = data;   
         }
+        
+        emit NftRegistered(user, tokenIds);
     }
 
     /** 
@@ -91,9 +91,9 @@ contract NftRegistry is OApp, Ownable2Step {
             
             // update storage
             delete nfts[tokenId];
-
-            emit NftReleased(msg.sender, tokenId);
         }
+
+        emit NftReleased(msg.sender, tokenIds);
 
         // if tokenIds.length = 1
         uint256 baseGas = 73_000;

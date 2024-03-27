@@ -16,14 +16,9 @@ update foundry.toml for remmapings
 - propose:`npx sphinx propose script/DeploySphinx.s.sol --networks testnets --tc ContractName`
 
 
-# Questions
+## Testnet Deployments
 
-- now that I have deployed these bunch of contracts, across mumbai and arb_sepolia, are they all operating from the same gnosis safe?
-- how to continue to script through that safe in the future? (esp. after multiple iterations/deployments)
-- reject deployment: cos' i used the wrong signer (phantom -> MM). Just redo and overwrrite?
-- 
+1. mockNftAddress = [0x3bACB53a7f5Eda5A784127aa0E9C1b3812B1b7a6](https://sepolia.etherscan.io/address/0x3bacb53a7f5eda5a784127aa0e9c1b3812b1b7a6)
+2. nftLockerAddress = [0xb3C3bd52354857C40909333219C0dC7925AaCB65](https://sepolia.etherscan.io/address/0xb3c3bd52354857c40909333219c0dc7925aacb65#readContract)
+3. nftRegistryAddress = [0xaACe57A9300afB8e32b1240DE0C74432E085474c](https://sepolia.arbiscan.io/address/0xaace57a9300afb8e32b1240de0c74432e085474c)
 
-
-## LZ quesntionm
-
-- options when calling `lock`

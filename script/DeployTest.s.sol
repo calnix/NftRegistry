@@ -63,11 +63,11 @@ contract DeployHome is LZState {
         address owner = wallet;
         address mocaNftAddress = address(mockNft);
 
-       NftLocker nftLocker = new NftLocker(endpoint, owner, mocaNftAddress);
+       NftLocker nftLocker = new NftLocker(endpoint, owner, mocaNftAddress, remoteChainID);
     }
 }
 
-// forge script script/Deploy.s.sol:DeployHome --rpc-url sepolia --broadcast --verify -vvvv --etherscan-api-key sepolia
+// forge script script/DeployTest.s.sol:DeployHome --rpc-url sepolia --broadcast --verify -vvvv --etherscan-api-key sepolia
 
 //Note: NftRegistry
 contract DeployRemote is LZState {
@@ -78,18 +78,18 @@ contract DeployRemote is LZState {
         address owner = wallet;
         address dummyPool = address(1);
 
-        NftRegistry nftRegistry = new NftRegistry(endpoint, owner, dummyPool);
+        NftRegistry nftRegistry = new NftRegistry(endpoint, owner, dummyPool, homeChainID);
     }
 }
 
-// forge script script/Deploy.s.sol:DeployRemote --rpc-url arbitrum_sepolia --broadcast --verify -vvvv --etherscan-api-key arbitrum_sepolia
+// forge script script/DeployTest.s.sol:DeployRemote --rpc-url arbitrum_sepolia --broadcast --verify -vvvv --etherscan-api-key arbitrum_sepolia
 
 
 abstract contract State is LZState {
 
-    address public mockNftAddress = 0x3E0aC7568a5441D113518Aa283da106402326cd6;
-    address public nftLockerAddress = 0x0F33605f68710ECd2057b6fC4121cAabDc33da61;
-    address public nftRegistryAddress = 0x49638a30bA51161edc5a8548b7698FD65b469418;
+    address public mockNftAddress = 0x3bACB53a7f5Eda5A784127aa0E9C1b3812B1b7a6;
+    address public nftLockerAddress = 0xb3C3bd52354857C40909333219C0dC7925AaCB65;
+    address public nftRegistryAddress = 0xaACe57A9300afB8e32b1240DE0C74432E085474c;
 
     MockNft public mockNft = MockNft(mockNftAddress);
     NftLocker public nftLocker = NftLocker(nftLockerAddress);
@@ -110,7 +110,7 @@ contract SetRemoteOnHome is State {
     }
 }
 
-// forge script script/Deploy.s.sol:SetRemoteOnHome --rpc-url sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:SetRemoteOnHome --rpc-url sepolia --broadcast -vvvv
 
 contract SetRemoteOnAway is State {
 
@@ -123,35 +123,37 @@ contract SetRemoteOnAway is State {
     }
 }
 
-// forge script script/Deploy.s.sol:SetRemoteOnAway --rpc-url arbitrum_sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:SetRemoteOnAway --rpc-url arbitrum_sepolia --broadcast -vvvv
 
 
 // ------------------------------------------- Gas Limits -------------------------
 
 
 import { IOAppOptionsType3, EnforcedOptionParam } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
+//Note: OApp has no enforced options
+
 /*
-contract SetGasLimitsHome is LZState {
+contract SetGasLimitsHome is State {
 
     function run() public broadcast {
 
         EnforcedOptionParam memory enforcedOptionParam;
         // msgType:1 -> a standard token transfer via send()
         // options: -> A typical lzReceive call will use 200000 gas on most EVM chains         
-        EnforcedOptionParam[] memory enforcedOptionParams = new EnforcedOptionParam[](1);
+        EnforcedOptionParam[] memory enforcedOptionParams = new EnforcedOptionParam[](2);
         enforcedOptionParams[0] = EnforcedOptionParam(remoteChainID, 1, hex"00030100110100000000000000000000000000030d40");
         
         // block sendAndCall: createLzReceiveOption() set gas requirement to be 1M
-        //enforcedOptionParams[1] = EnforcedOptionParam(homeChainID, 2, hex"000301001101000000000000000000000000000f4240");
+        enforcedOptionParams[1] = EnforcedOptionParam(remoteChainID, 2, hex"000301001101000000000000000000000000000f4240");
 
         nftLocker.setEnforcedOptions(enforcedOptionParams);
     }
 }
 
-// forge script script/Others/Others.s.sol:SetGasLimitsHome --rpc-url sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:SetGasLimitsHome --rpc-url sepolia --broadcast -vvvv
 
 
-contract SetGasLimitsAway is LZState {
+contract SetGasLimitsAway is State {
 
     function run() public broadcast {
         
@@ -168,7 +170,7 @@ contract SetGasLimitsAway is LZState {
     }
 }
 
-// forge script script/Others/Others.s.sol:SetGasLimitsAway --rpc-url polygon_mumbai --broadcast -vvvv
+// forge script script/DeployTest.s.sol:SetGasLimitsAway --rpc-url polygon_mumbai --broadcast -vvvv
 
 */
 
@@ -189,19 +191,18 @@ contract LockNFT is State {
 
 
         // craft payload
-        bytes memory nullBytes = new bytes(0);
         bytes memory payload = abi.encode(wallet, tokenIds);
 
-        // options
-        bytes memory options = hex"00030100110100000000000000000000000000030d40";
+        // options for locker_oneTokenId: 51_950 gas
+        bytes memory options = hex"0003010011010000000000000000000000000000caee";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options, false);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options);
 
-        nftLocker.lock{value: nativeFee}(tokenIds, remoteChainID, options);
+        nftLocker.lock{value: nativeFee}(tokenIds);
     }
 }
 
-// forge script script/Deploy.s.sol:LockNFT --rpc-url sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:LockNFT --rpc-url sepolia --broadcast -vvvv
 
 /**
 Note:
@@ -211,7 +212,7 @@ Note:
 
  */
 
- contract ReleaseNFT is State {
+contract ReleaseNFT is State {
 
     function run() public broadcast {
         
@@ -222,16 +223,79 @@ Note:
         tokenIds[0] = tokenId;
 
         // craft payload
-        bytes memory nullBytes = new bytes(0);
         bytes memory payload = abi.encode(wallet, tokenIds);
 
-        // options
-        bytes memory options = hex"00030100110100000000000000000000000000030d40";
+        // options for registry_oneTokenId: 73_000 gas
+        bytes memory options = hex"00030100110100000000000000000000000000011d28";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(homeChainID, payload, options, false);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(payload, options, false);
 
-        nftRegistry.release{value: nativeFee}(tokenIds, homeChainID, options);
+        nftRegistry.release{value: nativeFee}(tokenIds);
     }
- }
+}
 
-// forge script script/Deploy.s.sol:ReleaseNFT --rpc-url arbitrum_sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:ReleaseNFT --rpc-url arbitrum_sepolia --broadcast -vvvv
+
+
+// ------------------------------------------- Mint and Lock multiple NFTs -------------------------
+
+contract LockNFTs is State {
+
+    function run() public broadcast {
+        
+        // mint + approve
+        mockNft.mint(1);
+        mockNft.mint(2);
+        mockNft.mint(3);
+        mockNft.mint(4);
+        mockNft.mint(5);
+        mockNft.setApprovalForAll(address(nftLocker), true);
+        
+        // array
+        uint256[] memory tokenIds = new uint256[](5);
+            tokenIds[0] = 1;
+            tokenIds[1] = 2;
+            tokenIds[2] = 3;
+            tokenIds[3] = 4;
+            tokenIds[4] = 5;
+
+
+        // craft payload
+        bytes memory payload = abi.encode(wallet, tokenIds);
+
+        // options for locker_fiveTokenId: 158_350 gas
+        bytes memory options = hex"00030100110100000000000000000000000000026a8e";
+        
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options);
+
+        nftLocker.lock{value: nativeFee}(tokenIds);
+    }
+}
+
+// forge script script/DeployTest.s.sol:LockNFTs --rpc-url sepolia --broadcast -vvvv
+
+contract ReleaseNFTs is State {
+
+    function run() public broadcast {
+        
+        // array
+        uint256[] memory tokenIds = new uint256[](5);
+            tokenIds[0] = 1;
+            tokenIds[1] = 2;
+            tokenIds[2] = 3;
+            tokenIds[3] = 4;
+            tokenIds[4] = 5;
+
+        // craft payload
+        bytes memory payload = abi.encode(wallet, tokenIds);
+
+        // options for registry_fiveTokenId: 146_612 gas
+        bytes memory options = hex"00030100110100000000000000000000000000023cb4";
+        
+        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(payload, options, false);
+
+        nftRegistry.release{value: nativeFee}(tokenIds);
+    }
+}
+
+// forge script script/DeployTest.s.sol:ReleaseNFTs --rpc-url arbitrum_sepolia --broadcast -vvvv
