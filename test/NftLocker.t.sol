@@ -134,13 +134,26 @@ contract StateZeroTest is StateZero {
         nftLocker.freeze();
     }
 
-    function testMaxArrayLimit() public {
+    function testCannotExceedMaxArrayLimit() public {
 
         uint256[] memory tokenIds = new uint256[](10);
         
         vm.prank(userB);
         vm.expectRevert("Array max length exceeded");
         nftLocker.lock{value: 78_550}(tokenIds);
+    }
+
+    function testCannotDuplicateTokenId() public {
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 2;
+
+        vm.startPrank(userB);
+        nft.setApprovalForAll(address(nftLocker), true);
+        vm.expectRevert("Already locked");
+        nftLocker.lock{value: 78_550}(tokenIds);
+
+        vm.stopPrank();
     }
 
     function testUserCanLock() public {
@@ -253,6 +266,19 @@ abstract contract StateFrozen is StateLockedAndPaused {
 }
 
 contract StateFrozenTest is StateFrozen {
+
+    function testUserCannotLock() public {
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 2;
+        tokenIds[1] = 2;
+
+        vm.startPrank(userB);
+            nft.setApprovalForAll(address(nftLocker), true);
+            vm.expectRevert(abi.encodeWithSelector(Pausable.EnforcedPause.selector));
+            nftLocker.lock{value: 78_550}(tokenIds);
+
+        vm.stopPrank();
+    }
 
     function testUserCanExit() public {
         vm.prank(userB);
