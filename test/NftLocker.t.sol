@@ -34,8 +34,8 @@ abstract contract StateZero is Test {
     uint32 public dstEid = 1;
 
     // events
-    event NftLocked(address indexed user, uint256 indexed tokenId);
-    event NftUnlocked(address indexed user, uint256 indexed tokenId);
+    event NftLocked(address indexed user, uint256[] indexed tokenIds);
+    event NftUnlocked(address indexed user, uint256[] indexed tokenIds);
     event Recovered(address indexed nft, uint256 indexed tokenId, address indexed receiver);
     event PoolFrozen(uint256 indexed timestamp);
 
@@ -166,10 +166,7 @@ contract StateZeroTest is StateZero {
          nft.setApprovalForAll(address(nftLocker), true);
                 // check events
                  vm.expectEmit(true, true, false, false);
-                emit NftLocked(userB, 2);
-
-                vm.expectEmit(true, true, false, false);
-                emit NftLocked(userB, 3);
+                emit NftLocked(userB, tokenIds);
 
          nftLocker.lock{value: 78_550}(tokenIds);
 
@@ -287,12 +284,9 @@ contract StateFrozenTest is StateFrozen {
         tokenIds[0] = 2;
         tokenIds[1] = 3;
 
-            // check events
+            // check event
             vm.expectEmit(true, true, false, false);
-            emit NftUnlocked(userB, 2);
-
-            vm.expectEmit(true, true, false, false);
-            emit NftUnlocked(userB, 3);
+            emit NftUnlocked(userB, tokenIds);
 
         nftLocker.emergencyExit(tokenIds);
 
