@@ -134,7 +134,6 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
                                 INTERNAL
     //////////////////////////////////////////////////////////////*/
     
-    // returns the most recently locked tokenId
     // called by _lzReceive
     function _unlock(address user, uint256[] memory tokenIds) internal {
         uint256 length = tokenIds.length;

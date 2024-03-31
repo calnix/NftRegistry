@@ -119,13 +119,23 @@ contract NftRegistry is OApp, Ownable2Step {
                                   POOL
     //////////////////////////////////////////////////////////////*/
    
+    /** 
+     * @notice Called by owner to set pool address, once the pool contract has been deployed.
+     * @param pool_ Pool address
+     */
     function setPool(address pool_) external onlyOwner {
         pool = pool_;
         emit PoolUpdated(pool_);
     }
 
-    ///@dev only callable by pool
-    ///@dev input validation and array length check handled by pool
+    
+    /** 
+     * @notice Called by pool to associate a tokenId to a specific vaultId, thereby preventing repeated staking.
+     * @dev Input validation and array length check handled by pool
+     * @param onBehalfOf Staker's address
+     * @param tokenIds Nft token ids to be staked
+     * @param vaultId Vault id to be staked into
+     */
     function recordStake(address onBehalfOf, uint256[] calldata tokenIds, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
@@ -150,8 +160,14 @@ contract NftRegistry is OApp, Ownable2Step {
         emit NftStaked(onBehalfOf, tokenIds, vaultId);
     }
 
-    ///@dev only callable by pool
-    ///@dev input validation and array length check handled by pool
+    
+    /** 
+     * @notice Called by pool to disassociate a tokenId from a its vaultId, thereby freeing it to be released.
+     * @dev Input validation and array length check handled by pool
+     * @param onBehalfOf Staker's address
+     * @param tokenIds Nft token ids to be unstaked
+     * @param vaultId Vault id to be unstaked from
+     */
     function recordUnstake(address onBehalfOf, uint256[] calldata tokenIds, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
@@ -229,7 +245,6 @@ contract NftRegistry is OApp, Ownable2Step {
         // update
         _register(owner, tokenIds);
     }
-
 
 }
 
