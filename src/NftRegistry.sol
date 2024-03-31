@@ -10,11 +10,15 @@ import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/lib
 // issues
 contract NftRegistry is OApp, Ownable2Step {
     using OptionsBuilder for bytes;
-   
+
+    address public pool;   
     // Chain id of locker contract 
     uint32 public immutable dstEid;
 
-    address public pool;
+    // LZ options
+    uint256 immutable BASE_GAS = 73_000;
+    uint256 immutable GAS_PER_LOOP = 18_403;
+    uint256 public gasBuffer;
 
     struct TokenData {
         address owner;
@@ -95,11 +99,8 @@ contract NftRegistry is OApp, Ownable2Step {
 
         emit NftReleased(msg.sender, tokenIds);
 
-        // if tokenIds.length = 1
-        uint256 baseGas = 73_000;
-        // gas multiplier
-        uint256 gasMultiplier = 18_403 * (length - 1);
-        uint256 totalGas = baseGas + gasMultiplier;
+        // dst gas needed
+        uint256 totalGas = BASE_GAS + (GAS_PER_LOOP * (length - 1)) + gasBuffer;
 
         // create options
         bytes memory options;
@@ -211,6 +212,20 @@ contract NftRegistry is OApp, Ownable2Step {
     function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
         Ownable2Step._transferOwnership(newOwner);
     }
+
+
+    /*//////////////////////////////////////////////////////////////
+                                 ADMIN
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Future-proofing, in-case there are LZ changes that result in differing gas usage 
+     * @dev Should be left untouched, unless there is an unexpected breaking LZ change
+     * @param gasBuffer_ Amount of additional gas for execution on dstChain
+     */
+    function setGasBuffer(uint256 gasBuffer_) external onlyOwner {
+        gasBuffer = gasBuffer_;
+    }   
 
 
     /*//////////////////////////////////////////////////////////////

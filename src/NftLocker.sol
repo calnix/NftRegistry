@@ -16,6 +16,11 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     uint32 public immutable dstEid;
     IERC721 public immutable MOCA_NFT;
 
+    // LZ options
+    uint256 immutable BASE_GAS = 51_950;
+    uint256 immutable GAS_PER_LOOP = 26_600;
+    uint256 public gasBuffer;
+
     // locked nfts are assigned to the user's address
     mapping(uint256 tokenId => address user) public nfts;
 
@@ -64,11 +69,8 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
 
         emit NftLocked(msg.sender, tokenIds);
 
-        // if tokenIds.length = 1
-        uint256 baseGas = 51_950;
-        // gas multiplier
-        uint256 gasMultiplier = 26_600 * (length - 1);
-        uint256 totalGas = baseGas + gasMultiplier;
+        // dst gas needed
+        uint256 totalGas = BASE_GAS + (GAS_PER_LOOP * (length - 1)) + gasBuffer;
 
         // create options
         bytes memory options;
@@ -103,6 +105,16 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Future-proofing, in-case there are LZ changes that result in differing gas usage 
+     * @dev Should be left untouched, unless there is an unexpected breaking LZ change
+     * @param gasBuffer_ Amount of additional gas for execution on dstChain
+     */
+    function setGasBuffer(uint256 gasBuffer_) external onlyOwner {
+        gasBuffer = gasBuffer_;
+    }   
+
+
+    /**
      * @notice Pause pool
      */
     function pause() external onlyOwner whenNotPaused {
@@ -129,6 +141,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
         isFrozen = true;
         emit PoolFrozen(block.timestamp);
     }
+
 
     /*//////////////////////////////////////////////////////////////
                                 INTERNAL
