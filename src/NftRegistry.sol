@@ -30,8 +30,8 @@ contract NftRegistry is OApp, Ownable2Step {
     event NftRegistered(address indexed user, uint256[] indexed tokenIds);
     event NftReleased(address indexed user, uint256[] indexed tokenIds);
 
-    event NftStaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
-    event NftUnstaked(address indexed user, uint256 indexed tokenId, bytes32 indexed vaultId);
+    event NftStaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
+    event NftUnstaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
 
 //-------------------------------constructor-------------------------------------------
     constructor(address endpoint, address owner, address pool_, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
@@ -125,41 +125,54 @@ contract NftRegistry is OApp, Ownable2Step {
     }
 
     ///@dev only callable by pool
-    function recordStake(address onBehalfOf, uint256 tokenId, bytes32 vaultId) external {
+    ///@dev input validation and array length check handled by pool
+    function recordStake(address onBehalfOf, uint256[] calldata tokenIds, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
-        // cache 
-        TokenData memory data = nfts[tokenId];
+        uint256 length = tokenIds.length;
 
-        // ensure tokenId does not belong to someone else
-        require(data.owner == onBehalfOf, "Incorrect tokenId");
-        // ensure NFT has not been staked
-        require(data.vaultId == bytes32(0), "Nft is staked");
+        for (uint256 i; i < length; ++i) {
+            
+            // cache             
+            uint256 tokenId = tokenIds[i];
+            TokenData memory data = nfts[tokenId];
+
+            // ensure tokenId does not belong to someone else
+            require(data.owner == onBehalfOf, "Incorrect tokenId");
+            // ensure NFT has not been staked
+            require(data.vaultId == bytes32(0), "Nft is staked");
         
-        // update storage
-        data.vaultId = vaultId;
-        nfts[tokenId] = data;
+            // update storage
+            data.vaultId = vaultId;
+            nfts[tokenId] = data;
+        }
         
-        emit NftStaked(onBehalfOf, tokenId, vaultId);
+        emit NftStaked(onBehalfOf, tokenIds, vaultId);
     }
 
     ///@dev only callable by pool
-    function recordUnstake(address onBehalfOf, uint256 tokenId, bytes32 vaultId) external {
+    ///@dev input validation and array length check handled by pool
+    function recordUnstake(address onBehalfOf, uint256[] calldata tokenIds, bytes32 vaultId) external {
         require(msg.sender == pool, "Only pool");
 
-        // cache 
-        TokenData memory data = nfts[tokenId];
+        uint256 length = tokenIds.length;
 
-        // ensure tokenId does not belong to someone else
-        require(data.owner == onBehalfOf, "Incorrect tokenId");
-        // ensure correct vaultId
-        require(data.vaultId == vaultId, "Incorrect vaultId");
+        for (uint256 i; i < length; ++i) {
+            // cache 
+            uint256 tokenId = tokenIds[i];
+            TokenData memory data = nfts[tokenId];
+
+            // ensure tokenId does not belong to someone else
+            require(data.owner == onBehalfOf, "Incorrect tokenId");
+            // ensure correct vaultId
+            require(data.vaultId == vaultId, "Incorrect vaultId");
+            
+            // update storage
+            delete data.vaultId;
+            nfts[tokenId] = data;
+        }
         
-        // update storage
-        delete data.vaultId;
-        nfts[tokenId] = data;
-        
-        emit NftUnstaked(onBehalfOf, tokenId, vaultId);
+        emit NftUnstaked(onBehalfOf, tokenIds, vaultId);
     }
 
     

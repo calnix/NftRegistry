@@ -33,6 +33,11 @@ abstract contract StateZero is Test {
 
     uint32 public dstEid = 1;
 
+    // tokenIds per user
+    uint256[] public tokenIdsA;
+    uint256[] public tokenIdsB;
+    uint256[] public tokenIdsC;
+
     // events
     event NftLocked(address indexed user, uint256[] indexed tokenIds);
     event NftUnlocked(address indexed user, uint256[] indexed tokenIds);
@@ -80,6 +85,18 @@ abstract contract StateZero is Test {
             nft.mint(8);
         vm.stopPrank();
 
+        // tokenId arrays
+        tokenIdsA.push(1);
+
+        tokenIdsB.push(2);
+        tokenIdsB.push(3);
+        
+        tokenIdsC.push(4);
+        tokenIdsC.push(5);
+        tokenIdsC.push(6);
+        tokenIdsC.push(7);
+        tokenIdsC.push(8);
+
         //deal gas
         vm.deal(userA, 1 ether);
         vm.deal(userB, 1 ether);
@@ -118,12 +135,8 @@ contract StateZeroTest is StateZero {
     function testUserCannotCallExit() public {
         vm.prank(userB);
         vm.expectRevert(abi.encodeWithSelector(Pausable.ExpectedPause.selector));
-    
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 2;
-        tokenIds[1] = 3;
 
-        nftLocker.emergencyExit(tokenIds);
+        nftLocker.emergencyExit(tokenIdsB);
     }
 
     function testUserCannotCallFreeze() public {
@@ -157,18 +170,15 @@ contract StateZeroTest is StateZero {
     }
 
     function testUserCanLock() public {
-        
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 2;
-        tokenIds[1] = 3;
 
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
-                // check events
-                 vm.expectEmit(true, true, false, false);
-                emit NftLocked(userB, tokenIds);
 
-         nftLocker.lock{value: 78_550}(tokenIds);
+            // check events
+            vm.expectEmit(true, true, false, false);
+            emit NftLocked(userB, tokenIdsB);
+
+         nftLocker.lock{value: 78_550}(tokenIdsB);
 
         vm.stopPrank();
 
@@ -192,13 +202,9 @@ abstract contract StateLockedAndPaused is StateZero {
     function setUp() public virtual override {
         super.setUp();
 
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 2;
-        tokenIds[1] = 3;
-
         vm.startPrank(userB);
          nft.setApprovalForAll(address(nftLocker), true);
-         nftLocker.lock{value: 78_550}(tokenIds);
+         nftLocker.lock{value: 78_550}(tokenIdsB);
 
         vm.stopPrank();
 
@@ -280,15 +286,11 @@ contract StateFrozenTest is StateFrozen {
     function testUserCanExit() public {
         vm.prank(userB);
 
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 2;
-        tokenIds[1] = 3;
-
             // check event
             vm.expectEmit(true, true, false, false);
-            emit NftUnlocked(userB, tokenIds);
+            emit NftUnlocked(userB, tokenIdsB);
 
-        nftLocker.emergencyExit(tokenIds);
+        nftLocker.emergencyExit(tokenIdsB);
 
         // check assets
         assertEq(nft.balanceOf(userB), 2);

@@ -31,6 +31,20 @@ abstract contract StateZero is Test {
     // params
     uint32 public dstEid = 1;
 
+    // tokenIds per user
+    uint256[] public tokenIdsA;
+    uint256[] public tokenIdsB;
+
+    // events
+    event PoolUpdated(address indexed newPool);
+    event LockerUpdated(address indexed newLocker);
+
+    event NftRegistered(address indexed user, uint256[] indexed tokenIds);
+    event NftReleased(address indexed user, uint256[] indexed tokenIds);
+
+    event NftStaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
+    event NftUnstaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
+
     function setUp() public virtual {
         // users
         userA = makeAddr("userA");
@@ -52,20 +66,18 @@ abstract contract StateZero is Test {
 
         vm.stopPrank();
 
-        // userA has 1 nft: tokenId = 0
-        uint256[] memory tokenIdsA = new uint256[](1);
-        tokenIdsA[0] = 0;
-        registry.register(userA, tokenIdsA);
-
-        // userB has 1 nft: tokenId = 1,2
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;
-        registry.register(userB, tokenIdsB);
-
         // gas
         vm.deal(userA, 1 ether);
         vm.deal(userB, 1 ether);
+
+        // tokenId arrays
+        tokenIdsA.push(0);
+        tokenIdsB.push(1);
+        tokenIdsB.push(2);
+        
+        registry.register(userA, tokenIdsA);
+        registry.register(userB, tokenIdsB);
+
     } 
 }
 
@@ -114,12 +126,16 @@ contract StateZeroTest is StateZero {
     function testOwnerCanSetPool() public {
 
         vm.prank(owner);
-        registry.setPool(userA);
+        
+        vm.expectEmit(true, false, false, false);
+        emit PoolUpdated(address(1));
 
-        assertEq(registry.pool(), userA);
+        registry.setPool(address(1));
+
+        assertEq(registry.pool(), address(1));
     }
 
-    function testReleaseMaxArrayLimit() public {
+    function testCannotExceedReleaseMaxArrayLimit() public {
 
         uint256[] memory tokenIds = new uint256[](10);
         
@@ -127,32 +143,20 @@ contract StateZeroTest is StateZero {
         registry.release{value: 1 ether}(tokenIds);
     }
 
-    function testCannotReleaseRepeatedTokenIds() public {
-        
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 1;        
+    function testCannotReleaseRepeatedTokenIds() public {    
 
         vm.expectRevert("Not Owner");
-        registry.release{value: 91_403}(tokenIds);
+        registry.release{value: 91_403}(tokenIdsB);
     }
 
     function testCannotReleaseOtherTokenId() public {
         
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;     
-
         vm.prank(userA);
         vm.expectRevert("Not Owner");
         registry.release{value: 91_403}(tokenIdsB);
     }
 
-    function testReleaseRevertsInsufficientGas() public {
-        
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;     
+    function testCannotReleaseRevertsInsufficientGas() public {
 
         vm.prank(userB);
         vm.expectRevert(abi.encodeWithSelector(OAppSender.NotEnoughNative.selector, 0));
@@ -167,12 +171,11 @@ contract StateZeroTest is StateZero {
         (address owner3, ) = registry.nfts(2);
         assert(owner3 == userB);
 
-
-        uint256[] memory tokenIdsB = new uint256[](2);
-        tokenIdsB[0] = 1;
-        tokenIdsB[1] = 2;
-
         vm.prank(userB);
+
+            vm.expectEmit(true, true, false, false);
+            emit NftReleased(userB, tokenIdsB);
+
         registry.release{value: 91_403}(tokenIdsB);
 
         // check mapping after
@@ -184,21 +187,45 @@ contract StateZeroTest is StateZero {
     }
 
     function testUserCannotRecordStake() public {
-        
-        vm.prank(userB);
+
+        vm.prank(userA);
         vm.expectRevert("Only pool");
-        registry.recordStake(userB, 1, hex"01");
+        registry.recordStake(userA, tokenIdsA, hex"01");
     }
 
     function testPoolCanRecordStake() public {
-        
+    
         vm.prank(dummyPool);
-        registry.recordStake(userB, 1, hex"01");
+
+            vm.expectEmit(true, true, false, false);
+            emit NftStaked(userA, tokenIdsA, hex"01");
+        
+        registry.recordStake(userA, tokenIdsA, hex"01");
 
         // check mapping
-        (address owner, bytes32 vaultId) = registry.nfts(1);
+        (address owner, bytes32 vaultId) = registry.nfts(0);
         assertEq(vaultId, hex"01");
-        assertEq(owner, userB);
+        assertEq(owner, userA);
+    }
+
+    function testPoolCanRecordMultipleStake() public {
+
+        vm.prank(dummyPool);
+
+            vm.expectEmit(true, true, false, false);
+            emit NftStaked(userB, tokenIdsB, hex"02");
+
+        registry.recordStake(userB, tokenIdsB, hex"02");
+
+        // check mapping
+        (address owner1, bytes32 vaultId1) = registry.nfts(1);
+        assertEq(vaultId1, hex"02");
+        assertEq(owner1, userB);
+
+        // check mapping
+        (address owner2, bytes32 vaultId2) = registry.nfts(2);
+        assertEq(vaultId2, hex"02");
+        assertEq(owner2, userB);
     }
 
 }
@@ -208,47 +235,70 @@ abstract contract StateStaked is StateZero {
     function setUp() public virtual override {
         super.setUp();
 
-        // userB stakes into some vault
-        vm.prank(dummyPool);
-        registry.recordStake(userB, 1, hex"01");
+        vm.startPrank(dummyPool);
+            registry.recordStake(userA, tokenIdsA, hex"01");
+            registry.recordStake(userB, tokenIdsB, hex"02");
+        vm.stopPrank();
     }
 }
 
 
 contract StateStakedTest is StateStaked {
      
-    function testUserCannotRecordUnstake() public {
-        
-        vm.prank(userB);
-        vm.expectRevert("Only pool");
-        registry.recordUnstake(userB, 1, hex"01");
-    }
-
-    function testPoolCanRecordUnstake() public {
-               
-        vm.prank(dummyPool);
-        registry.recordUnstake(userB, 1, hex"01");
-
-        // check mapping
-        (address owner, bytes32 vaultId) = registry.nfts(1);
-        assertEq(vaultId, "");
-        assertEq(owner, userB);
-    }
-
     function testCannotReleaseWhenStaked() public {
-
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = 1;
 
         vm.prank(userB);
         vm.expectRevert("Nft is staked");
-        registry.release{value: 73_000}(tokenIds);
+        registry.release{value: 73_000}(tokenIdsB);
     }
 
     function testIncorrectUserRecordUnstake() public {
+
         vm.prank(dummyPool);
         vm.expectRevert("Incorrect tokenId");
-        registry.recordUnstake(userA, 1, hex"01");
+        registry.recordUnstake(userA, tokenIdsB, hex"01");
+    }
+
+    function testUserCannotRecordUnstake() public {
+
+        vm.prank(userB);
+        vm.expectRevert("Only pool");
+        registry.recordUnstake(userB, tokenIdsB, hex"02");
+    }
+
+    function testPoolCanRecordUnstake() public {
+
+        vm.prank(dummyPool);
+
+            vm.expectEmit(true, true, false, false);
+            emit NftUnstaked(userA, tokenIdsA, hex"01");
+
+        registry.recordUnstake(userA, tokenIdsA, hex"01");
+
+        // check mapping
+        (address owner, bytes32 vaultId) = registry.nfts(0);
+        assertEq(vaultId, "");
+        assertEq(owner, userA);
+    }
+
+    function testPoolCanRecordUnstakeMultiple() public {
+           
+        vm.prank(dummyPool);
+        
+            vm.expectEmit(true, true, false, false);
+            emit NftUnstaked(userB, tokenIdsB, hex"02");
+
+        registry.recordUnstake(userB, tokenIdsB, hex"02");
+
+        // check mapping
+        (address owner1, bytes32 vaultId1) = registry.nfts(1);
+        assertEq(vaultId1, "");
+        assertEq(owner1, userB);
+
+        // check mapping
+        (address owner2, bytes32 vaultId2) = registry.nfts(2);
+        assertEq(vaultId2, "");
+        assertEq(owner2, userB);
     }
 
     //Note: calling Registry::lzReceive::_register 
