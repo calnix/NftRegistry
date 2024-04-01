@@ -125,7 +125,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
      * @notice Unpause pool
      */
     function unpause() external onlyOwner whenPaused {
-        require(isFrozen == false, "Locker is frozen");
+        require(!isFrozen, "Locker is frozen");
         _unpause();
     }
     
@@ -136,7 +136,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
             Enables emergencyExit() to be called.
      */
     function freeze() external whenPaused onlyOwner {
-        require(isFrozen == false, "Locker is frozen");
+        require(!isFrozen, "Locker is frozen");
         
         isFrozen = true;
         emit PoolFrozen(block.timestamp);
