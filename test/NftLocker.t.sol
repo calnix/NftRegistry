@@ -111,6 +111,12 @@ contract StateZeroTest is StateZero {
         assert(address(nftLocker.MOCA_NFT()) == address(nft));
     }
 
+    function testUserCannotSetGasBuffer(uint256 amount) public {
+        vm.prank(userA);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
+        nftLocker.setGasBuffer(amount);
+    }
+
     function testUserCannotTransferOwnership() public {
         
         vm.prank(userA);
@@ -192,6 +198,15 @@ contract StateZeroTest is StateZero {
         assert(nftLocker.nfts(2) == userB);
         assert(nftLocker.nfts(3) == userB);
 
+    }
+
+    function testOwnerSetGasBuffer(uint256 amount) public {
+        assertEq(nftLocker.gasBuffer(), 0);
+
+        vm.prank(owner);
+        nftLocker.setGasBuffer(amount);
+
+        assertEq(nftLocker.gasBuffer(), amount);
     }
 
 }

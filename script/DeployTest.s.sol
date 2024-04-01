@@ -196,7 +196,7 @@ contract LockNFT is State {
         // options for locker_oneTokenId: 51_950 gas
         bytes memory options = hex"0003010011010000000000000000000000000000caee";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(tokenIds);
 
         nftLocker.lock{value: nativeFee}(tokenIds);
     }
@@ -266,7 +266,7 @@ contract LockNFTs is State {
         // options for locker_fiveTokenId: 158_350 gas
         bytes memory options = hex"00030100110100000000000000000000000000026a8e";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(payload, options);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftLocker.quote(tokenIds);
 
         nftLocker.lock{value: nativeFee}(tokenIds);
     }

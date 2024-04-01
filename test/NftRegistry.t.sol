@@ -83,6 +83,12 @@ abstract contract StateZero is Test {
 
 
 contract StateZeroTest is StateZero {
+    
+    function testUserCannotSetGasBuffer(uint256 amount) public {
+        vm.prank(userA);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, userA));
+        registry.setGasBuffer(amount);
+    }
 
     function testUserCannotTransferOwnership() public {
         
@@ -133,6 +139,15 @@ contract StateZeroTest is StateZero {
         registry.setPool(address(1));
 
         assertEq(registry.pool(), address(1));
+    }
+
+    function testOwnerSetGasBuffer(uint256 amount) public {
+        assertEq(registry.gasBuffer(), 0);
+
+        vm.prank(owner);
+        registry.setGasBuffer(amount);
+
+        assertEq(registry.gasBuffer(), amount);
     }
 
     function testCannotExceedReleaseMaxArrayLimit() public {
