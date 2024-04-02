@@ -41,6 +41,9 @@ Note that users can commit a maximum of 5 tokenIds per execution of `lock`. This
 
 Deployed with DeployTest.s.sol.
 
+## Setup
+
+
 ## Sphinx
 
 - Install Sphinx CLI: `npm install --save-dev @sphinx-labs/plugins`
