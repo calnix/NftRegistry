@@ -5,7 +5,7 @@
   },
   "devDependencies": {
     "@openzeppelin/contracts": "^5.0.1",
-    "@sphinx-labs/plugins": "^0.29.5"
+    "@sphinx-labs/plugins": "^0.30.12"
   },
   "resolutions": {
     "@openzeppelin/contracts": "^5.0.1"
