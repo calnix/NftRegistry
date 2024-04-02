@@ -99,7 +99,7 @@ contract NftRegistry is OApp, Ownable2Step {
 
         emit NftReleased(msg.sender, tokenIds);
 
-        // dst gas needed
+        // dst gas needed, only BASE_GAS needed for 1 tokenId
         uint256 totalGas = BASE_GAS + (GAS_PER_LOOP * (length - 1)) + gasBuffer;
 
         // create options

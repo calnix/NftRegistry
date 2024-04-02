@@ -204,14 +204,6 @@ contract LockNFT is State {
 
 // forge script script/DeployTest.s.sol:LockNFT --rpc-url sepolia --broadcast -vvvv
 
-/**
-Note:
-
- Must pass options as part of quote, to get a valid quote.
-  is it because we did not set enforced options?
-
- */
-
 contract ReleaseNFT is State {
 
     function run() public broadcast {
