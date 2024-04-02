@@ -196,7 +196,10 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
      * @param tokenIds Array of tokenIds to be locked
      */
     function quote(uint256[] calldata tokenIds) external view returns (uint256 nativeFee, uint256 lzTokenFee) {
-
+        uint256 length = tokenIds.length;
+        require(length > 0, "Empty array");
+        require(length <= 5, "Array max length exceeded");
+        
         bytes memory payload = abi.encode(msg.sender, tokenIds);
 
         // dst gas needed

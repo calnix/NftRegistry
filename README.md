@@ -43,6 +43,8 @@ Deployed with DeployTest.s.sol.
 
 ## Setup
 
+- forge install
+- npm install
 
 ## Sphinx
 
