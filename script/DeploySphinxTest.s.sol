@@ -50,14 +50,16 @@ contract Deploy is LZState {
         
         sphinxConfig.testnets = ["arbitrum_sepolia", "polygon_mumbai"];
 
-        sphinxConfig.projectName = "NftLockerV1";
+        sphinxConfig.projectName = "NftLockerV2";
         sphinxConfig.threshold = 1;
+
+        sphinxConfig.saltNonce = 1;  //in case it detects other projects
     }
 
     function run() public sphinx {
 
         // Home
-        if (block.chainid == blockChainId_sepolia) {    
+        if (block.chainid == blockChainId_arbSepolia) {    
 
             // deploy mock nft
             MockNft mockNft = new MockNft();
@@ -71,8 +73,6 @@ contract Deploy is LZState {
 
             locker = new NftLocker(endpoint, owner, mocaNftAddress, dstEid_);
             
-            vm.makePersistent(address(locker));
-
         // Remote  
         } else if (block.chainid == blockChainId_mumbai) { 
         
@@ -82,12 +82,10 @@ contract Deploy is LZState {
             uint32 dstEid_ = homeChainID;
 
             registry = new NftRegistry(endpoint, owner, dummyPool, dstEid_);
-
-            vm.makePersistent(address(registry));
         }
 
         // Home
-        if (block.chainid == blockChainId_sepolia) { 
+        if (block.chainid == blockChainId_arbSepolia) { 
         
             //............ Set peer on Home
             bytes32 peer = bytes32(uint256(uint160(address(registry))));
