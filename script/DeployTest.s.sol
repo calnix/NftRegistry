@@ -220,7 +220,7 @@ contract ReleaseNFT is State {
         // options for registry_oneTokenId: 73_000 gas
         bytes memory options = hex"00030100110100000000000000000000000000011d28";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(payload, options, false);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(tokenIds);
 
         nftRegistry.release{value: nativeFee}(tokenIds);
     }
@@ -284,7 +284,7 @@ contract ReleaseNFTs is State {
         // options for registry_fiveTokenId: 146_612 gas
         bytes memory options = hex"00030100110100000000000000000000000000023cb4";
         
-        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(payload, options, false);
+        (uint256 nativeFee, uint256 lzTokenFee) = nftRegistry.quote(tokenIds);
 
         nftRegistry.release{value: nativeFee}(tokenIds);
     }

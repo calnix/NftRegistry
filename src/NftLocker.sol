@@ -195,7 +195,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
      * @dev Quotes the gas needed to pay for the full omnichain transaction.
      * @param tokenIds Array of tokenIds to be locked
      */
-    function quote(uint256[] memory tokenIds) external view returns (uint256 nativeFee, uint256 lzTokenFee) {
+    function quote(uint256[] calldata tokenIds) external view returns (uint256 nativeFee, uint256 lzTokenFee) {
 
         bytes memory payload = abi.encode(msg.sender, tokenIds);
 
