@@ -1,8 +1,11 @@
 # Nft Locker + Registry
 
 We have NFTs currently deployed on Ethereum, which we want to involve as part of staking, which occurs on Polygon.
-
 Instead of bridging the NFTS over to polygon, we opt to have them 'locked' on Ethereum via NftLocker.sol, and correspondingly updated on NftRegistry.sol on Polygon.
+
+## Setup
+
+- forge install
 
 ## Execution flow
 
@@ -41,16 +44,3 @@ Note that users can commit a maximum of 5 tokenIds per execution of `lock`. This
 
 Deployed with DeployTest.s.sol.
 
-## Setup
-
-- forge install
-- npm install
-
-## Sphinx
-
-- Install Sphinx CLI: `npm install --save-dev @sphinx-labs/plugins`
-- Install Sphinx Foundry fork: `npx sphinx install`
-- Update .gitignore: `node_modules/`
-- Add remapping: `@sphinx-labs/contracts/=lib/sphinx/packages/contracts/contracts/foundry`
-- Update your deployment script
-- propose:`npx sphinx propose script/DeploySphinx.s.sol --networks testnets --tc ContractName`

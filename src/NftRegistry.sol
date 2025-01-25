@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {Ownable2Step} from "./../lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import {Pausable} from "./../lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";        // note: needed?
 
 import { OApp, Origin, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
