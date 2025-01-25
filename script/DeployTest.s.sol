@@ -34,16 +34,16 @@ abstract contract LZState is Script {
     uint16 homeChainID = sepoliaID;
     address homeLzEP = sepoliaEP;
 
-    uint16 remoteChainID = arbSepoliaID;
-    address remoteLzEP = arbSepoliaEP;
+    uint16 remoteChainID = baseSepoliaID;
+    address remoteLzEP = baseSepoliaEP;
 
     // wallets
-    address public wallet = 0xdE05a1Abb121113a33eeD248BD91ddC254d5E9Db;
+    address public wallet = 0x8C9C001F821c04513616fd7962B2D8c62f925fD2;
 
     modifier broadcast() {
 
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_TEST");
+        vm.startBroadcast(deployerPrivateKey);  
 
         _;
 
@@ -51,13 +51,13 @@ abstract contract LZState is Script {
     }
 }
 
-//Note: NftLocker 
+//Note: NftLocker: Sepolia 
 contract DeployHome is LZState {
     
     function run() public broadcast {
 
         MockNft mockNft = new MockNft();
-        mockNft.initialize("mocktNFT", "mocktNFT");
+        mockNft.initialize("mockNFT", "mockNFT");
 
         address endpoint = homeLzEP;
         address owner = wallet;
@@ -69,7 +69,7 @@ contract DeployHome is LZState {
 
 // forge script script/DeployTest.s.sol:DeployHome --rpc-url sepolia --broadcast --verify -vvvv --etherscan-api-key sepolia
 
-//Note: NftRegistry
+//Note: NftRegistry: 
 contract DeployRemote is LZState {
     
     function run() public broadcast {
@@ -82,14 +82,14 @@ contract DeployRemote is LZState {
     }
 }
 
-// forge script script/DeployTest.s.sol:DeployRemote --rpc-url arbitrum_sepolia --broadcast --verify -vvvv --etherscan-api-key arbitrum_sepolia
+// forge script script/DeployTest.s.sol:DeployRemote --rpc-url base_sepolia --broadcast --verify -vvvv --etherscan-api-key base_sepolia
 
 
 abstract contract State is LZState {
 
-    address public mockNftAddress = 0x54d4E6adc4f152ED4919C940CB3EA13B912519c9;
-    address public nftLockerAddress = 0x18F786AE5Fb1639BAa4fcE4B8F29c783949a66A8;
-    address public nftRegistryAddress = 0x03d9842E73b061AC6E20B7376fE3FEEDF55bc71a;
+    address public mockNftAddress = 0x58bDE6071DB4a9B006FdAbe75a2eeB43DEcb779B;
+    address public nftLockerAddress = 0x3DC5b1063e2FF0F675611922fC4b07AcF79B518A;
+    address public nftRegistryAddress = 0x5D4D4b620488DC5CeB13a73a6e700925F7682b02;
 
     MockNft public mockNft = MockNft(mockNftAddress);
     NftLocker public nftLocker = NftLocker(nftLockerAddress);
@@ -123,7 +123,7 @@ contract SetRemoteOnAway is State {
     }
 }
 
-// forge script script/DeployTest.s.sol:SetRemoteOnAway --rpc-url arbitrum_sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:SetRemoteOnAway --rpc-url base_sepolia --broadcast -vvvv
 
 
 // ------------------------------------------- Gas Limits -------------------------
@@ -226,7 +226,7 @@ contract ReleaseNFT is State {
     }
 }
 
-// forge script script/DeployTest.s.sol:ReleaseNFT --rpc-url arbitrum_sepolia --broadcast -vvvv
+// forge script script/DeployTest.s.sol:ReleaseNFT --rpc-url base_sepolia --broadcast -vvvv
 
 
 // ------------------------------------------- Mint and Lock multiple NFTs -------------------------

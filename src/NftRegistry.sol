@@ -43,6 +43,57 @@ contract NftRegistry is OApp, Ownable2Step {
         dstEid = dstEid_;
     }
 
+    //note: NEW
+    function checkIfUnassignedAndOwned(address user, uint256[] calldata tokenIds) public view returns (uint256) {
+
+        uint256 length = tokenIds.length;
+        require(length > 0, "Empty array");
+
+        uint256 isUnassignedAndOwned = 1;
+        for (uint256 i; i < length; ++i) {
+
+            uint256 tokenId = tokenIds[i];
+            TokenData memory data = nfts[tokenId];
+            
+            // check if owner is correct
+            if (data.owner != user) {
+                isUnassignedAndOwned = 0;
+                break;
+            }
+
+            // check if nft is assigned to a vault
+            if(data.vaultId != bytes32(0)) {
+                isUnassignedAndOwned = 0;
+                break;
+            }
+        }
+        return isUnassignedAndOwned;
+    }
+
+    //note: NEW
+    /**
+     * @notice Check if tokenIds owner matches supplied address
+     * @dev If user is owner of all tokenIds, fn expected to revert
+     * @param user Address to check against 
+     * @param tokenIds TokenIds to check
+     */
+    function streamingOwnerCheck(address user, uint256[] calldata tokenIds) external view {
+        uint256 length = tokenIds.length;
+        require(length > 0, "Empty array");
+
+        uint256 isOwner = 1;
+
+        for (uint256 i; i < length; ++i) {
+
+            uint256 tokenId = tokenIds[i];
+            if (nfts[tokenId].owner != user) {
+                isOwner = 0;
+                break;
+            }
+        }
+
+        require(isOwner == 1, "Not owner");
+    }
 
     /*//////////////////////////////////////////////////////////////
                                  LOCKER
