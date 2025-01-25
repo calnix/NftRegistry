@@ -4,3 +4,6 @@
 [submodule "lib/solpretty"]
 	path = lib/solpretty
 	url = https://github.com/devtooligan/solpretty
+[submodule "lib/devtools"]
+	path = lib/devtools
+	url = https://github.com/LayerZero-Labs/devtools
