@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {IERC721} from "./../lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
+import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Pausable} from "./../lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
+import {Ownable2Step} from "./../lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 
-import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol"; // { OptionsBuilder }
+
 
 contract NftLocker is OApp, Pausable, Ownable2Step {
     using OptionsBuilder for bytes;

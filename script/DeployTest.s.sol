@@ -7,7 +7,7 @@ import {NftLocker} from "./../src/NftLocker.sol";
 import {NftRegistry} from "./../src/NftRegistry.sol";
 import "test/mocks/MockNft.sol";
 
-import "node_modules/@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 abstract contract LZState is Script {
     
@@ -129,7 +129,7 @@ contract SetRemoteOnAway is State {
 // ------------------------------------------- Gas Limits -------------------------
 
 
-import { IOAppOptionsType3, EnforcedOptionParam } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppOptionsType3.sol";
+import { IOAppOptionsType3, EnforcedOptionParam } from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppOptionsType3.sol";
 //Note: OApp has no enforced options
 
 /*

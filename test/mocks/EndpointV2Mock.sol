@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import { MockRegistry } from "./MockRegistry.sol";
 import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
 
-import "node_modules/@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt, IMessageLibManager, ILayerZeroEndpointV2 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 contract EndpointV2Mock is Test {

@@ -2,17 +2,14 @@
     src = "src"
     out = "out"
     libs = ["lib"]
-    #Sphinx settings:
-    build_info = true
-    extra_output = ['storageLayout']
-    fs_permissions = [{ access = "read-write", path = "./"}]
-    always_use_create_2_factory = true
 
 remappings = [
-    '@layerzerolabs/=node_modules/@layerzerolabs/',
-    '@openzeppelin/=node_modules/@openzeppelin/',
-    'solidity-bytes-utils/=node_modules/solidity-bytes-utils/',
-    '@sphinx-labs/contracts/=lib/sphinx/packages/contracts/contracts/foundry'
+    '@layerzerolabs/oapp-evm/=lib/devtools/packages/oapp-evm/',
+    '@layerzerolabs/lz-evm-protocol-v2/=lib/layerzero-v2/packages/layerzero-v2/evm/protocol/',
+    '@layerzerolabs/lz-evm-messagelib-v2/=lib/layerzero-v2/packages/layerzero-v2/evm/messagelib/', # ExecutorOptions, DVNOptions
+    '@layerzerolabs/oft-evm/=lib/layerzero-v2/packages/layerzero-v2/evm/oapp/',
+    '@openzeppelin/=lib/openzeppelin-contracts/',
+    'solidity-bytes-utils/=lib/solidity-bytes-utils/',
 ]
 
 # LZ does not have v2 endpoints on goerli

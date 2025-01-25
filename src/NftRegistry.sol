@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable2Step} from "./../lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import {Pausable} from "./../lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
-import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import { OApp, Origin, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
+
 
 // issues
 contract NftRegistry is OApp, Ownable2Step {

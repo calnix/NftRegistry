@@ -4,20 +4,20 @@ pragma solidity ^0.8.13;
 import {Test, console2, stdStorage, StdStorage} from "forge-std/Test.sol";
 
 import { NftLocker } from "./../src/NftLocker.sol";
-import { Ownable } from "node_modules/@openzeppelin/contracts/access/Ownable.sol";
-import { Pausable } from "node_modules/@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Pausable} from "./../lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
 // errors
-import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";
+import "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
 
 // mocks
 import { MockNft } from "./mocks/MockNft.sol";
 import { EndpointV2Mock } from "./mocks/EndpointV2Mock.sol";
 
 // SendParam
-import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import "@layerzerolabs/oft-evm/contracts/oft/interfaces/IOFT.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
-import { OAppSender, Origin } from "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
+import { OAppSender, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 abstract contract StateZero is Test {
     using stdStorage for StdStorage;
