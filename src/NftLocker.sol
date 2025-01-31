@@ -34,6 +34,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     // errors
     error IncorrectCaller();
     error IncorrectOwner();
+    error EmptyArray();
 
     constructor(address endpoint, address owner, address mocaNft, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
         
@@ -105,7 +106,7 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
                                STREAMING
     //////////////////////////////////////////////////////////////*/
 
-    //note: NEW. check against streaming contract if implemented correctly
+    //note: NEW
     // to allow users to collect streaming rewards from NftStreaming contract while staking their NFTs for staking Pro
     /**
      * @notice Check if tokenIds owner matches supplied address
@@ -115,14 +116,12 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
      */
     function streamingOwnerCheck(address user, uint256[] calldata tokenIds) external view {
         uint256 length = tokenIds.length;
-        require(length > 0, "Empty array");
+        if(length == 0) revert EmptyArray();
 
         for (uint256 i; i < length; ++i) {
 
             uint256 tokenId = tokenIds[i];
-            if (nfts[tokenId] != user) {
-                revert IncorrectOwner();
-            }
+            if (nfts[tokenId] != user) revert IncorrectOwner();
         }
     }
 

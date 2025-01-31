@@ -42,6 +42,7 @@ contract NftRegistry is OApp, Ownable2Step {
     // errors
     error IncorrectOwner();
     error NftIsStaked();
+    error EmptyArray();
 
 //-------------------------------constructor-------------------------------------------
     constructor(address endpoint, address owner, address pool_, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
@@ -53,7 +54,7 @@ contract NftRegistry is OApp, Ownable2Step {
     function checkIfUnassignedAndOwned(address user, uint256[] calldata tokenIds) public view {
 
         uint256 length = tokenIds.length;
-        require(length > 0, "Empty array");
+        if(length == 0) revert EmptyArray();
 
         for (uint256 i; i < length; ++i) {
 
@@ -61,14 +62,10 @@ contract NftRegistry is OApp, Ownable2Step {
             TokenData memory data = nfts[tokenId];
             
             // check if owner is correct
-            if (data.owner != user) {
-                revert IncorrectOwner();
-            }
+            if (data.owner != user) revert IncorrectOwner();
 
             // check if nft is assigned to a vault
-            if(data.vaultId != bytes32(0)) {
-                revert NftIsStaked();
-            }
+            if(data.vaultId != bytes32(0)) revert NftIsStaked();
         }
     }
 
