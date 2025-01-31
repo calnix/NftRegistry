@@ -39,6 +39,10 @@ contract NftRegistry is OApp, Ownable2Step {
     event NftStaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
     event NftUnstaked(address indexed user, uint256[] indexed tokenIds, bytes32 indexed vaultId);
 
+    // errors
+    error IncorrectOwner();
+    error NftIsStaked();
+
 //-------------------------------constructor-------------------------------------------
     constructor(address endpoint, address owner, address pool_, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
         pool = pool_;
@@ -46,12 +50,11 @@ contract NftRegistry is OApp, Ownable2Step {
     }
 
     //note: NEW
-    function checkIfUnassignedAndOwned(address user, uint256[] calldata tokenIds) public view returns (uint256) {
+    function checkIfUnassignedAndOwned(address user, uint256[] calldata tokenIds) public view {
 
         uint256 length = tokenIds.length;
         require(length > 0, "Empty array");
 
-        uint256 isUnassignedAndOwned = 1;
         for (uint256 i; i < length; ++i) {
 
             uint256 tokenId = tokenIds[i];
@@ -59,42 +62,14 @@ contract NftRegistry is OApp, Ownable2Step {
             
             // check if owner is correct
             if (data.owner != user) {
-                isUnassignedAndOwned = 0;
-                break;
+                revert IncorrectOwner();
             }
 
             // check if nft is assigned to a vault
             if(data.vaultId != bytes32(0)) {
-                isUnassignedAndOwned = 0;
-                break;
+                revert NftIsStaked();
             }
         }
-        return isUnassignedAndOwned;
-    }
-
-    //note: NEW
-    /**
-     * @notice Check if tokenIds owner matches supplied address
-     * @dev If user is owner of all tokenIds, fn expected to revert
-     * @param user Address to check against 
-     * @param tokenIds TokenIds to check
-     */
-    function streamingOwnerCheck(address user, uint256[] calldata tokenIds) external view {
-        uint256 length = tokenIds.length;
-        require(length > 0, "Empty array");
-
-        uint256 isOwner = 1;
-
-        for (uint256 i; i < length; ++i) {
-
-            uint256 tokenId = tokenIds[i];
-            if (nfts[tokenId].owner != user) {
-                isOwner = 0;
-                break;
-            }
-        }
-
-        require(isOwner == 1, "Not owner");
     }
 
     /*//////////////////////////////////////////////////////////////
