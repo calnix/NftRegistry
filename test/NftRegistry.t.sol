@@ -58,9 +58,9 @@ abstract contract StateZero is Test {
         dummyPool = makeAddr("dummyPool");
 
         lzMock = new EndpointV2Mock();
-        registry = new MockRegistry(address(lzMock), owner, dummyPool, dstEid);
+        registry = new MockRegistry(address(lzMock), owner, dstEid);
         vm.label(address(registry), "registry");
-
+        
         //setUp Oapp
         registry.setPeer(dstEid, bytes32(uint256(uint160(address(1)))));
         registry.setPool(dummyPool);

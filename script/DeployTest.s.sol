@@ -78,7 +78,9 @@ contract DeployRemote is LZState {
         address owner = wallet;
         address dummyPool = address(1);
 
-        NftRegistry nftRegistry = new NftRegistry(endpoint, owner, dummyPool, homeChainID);
+        NftRegistry nftRegistry = new NftRegistry(endpoint, owner, homeChainID);
+        // setPool
+        nftRegistry.setPool(dummyPool);
     }
 }
 

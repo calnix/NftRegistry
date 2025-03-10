@@ -44,9 +44,7 @@ contract NftRegistry is OApp, Ownable2Step {
     error NftIsStaked();
     error EmptyArray();
 
-//-------------------------------constructor-------------------------------------------
-    constructor(address endpoint, address owner, address pool_, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
-        pool = pool_;
+    constructor(address endpoint, address owner, uint32 dstEid_) OApp(endpoint, owner) Ownable(owner) {
         dstEid = dstEid_;
     }
 
