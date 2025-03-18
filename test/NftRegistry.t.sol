@@ -7,7 +7,7 @@ import {Ownable} from "./../lib/openzeppelin-contracts/contracts/access/Ownable.
 import {Pausable} from "./../lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
 // mocks
-import { MockRegistry } from "./mocks/MockRegistry.sol";
+import { MockRegistry, NftRegistry } from "./mocks/MockRegistry.sol";
 import { EndpointV2Mock } from "./mocks/EndpointV2Mock.sol";
 
 // SendParam
@@ -27,6 +27,7 @@ abstract contract StateZero is Test {
     // users
     address public userA;
     address public userB;
+    address public userC;
     address public owner;
 
     // params
@@ -260,7 +261,30 @@ abstract contract StateStaked is StateZero {
 
 
 contract StateStakedTest is StateStaked {
-     
+
+    function testCheckIfUnassignedAndOwned_Reverts_EmptyArray() public {
+        uint256[] memory tokenIds = new uint256[](0);
+
+        vm.expectRevert(abi.encodeWithSelector(NftRegistry.EmptyArray.selector));
+        registry.checkIfUnassignedAndOwned(userA, tokenIds);
+    }
+
+    function testCheckIfUnassignedAndOwned_Reverts_IncorrectOwner() public {
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 4; // Using an unassigned token ID
+
+        vm.expectRevert(abi.encodeWithSelector(NftRegistry.IncorrectOwner.selector));
+        registry.checkIfUnassignedAndOwned(userA, tokenIds);
+    }
+
+    function testCheckIfUnassignedAndOwned_Reverts_NftIsStaked() public {
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 0;
+
+        vm.expectRevert(abi.encodeWithSelector(NftRegistry.NftIsStaked.selector));
+        registry.checkIfUnassignedAndOwned(userA, tokenIds);
+    }
+
     function testCannotReleaseWhenStaked() public {
 
         vm.prank(userB);
@@ -315,6 +339,16 @@ contract StateStakedTest is StateStaked {
         (address owner2, bytes32 vaultId2) = registry.nfts(2);
         assertEq(vaultId2, "");
         assertEq(owner2, userB);
+    }
+
+    function testCheckIfUnassignedAndOwned_Success() public {
+        vm.prank(dummyPool);
+        registry.recordUnstake(userA, tokenIdsA, hex"01");
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 0;
+
+        registry.checkIfUnassignedAndOwned(userA, tokenIds);
     }
 
     //Note: calling Registry::lzReceive::_register 

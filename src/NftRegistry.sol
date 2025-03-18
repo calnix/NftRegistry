@@ -47,7 +47,12 @@ contract NftRegistry is OApp, Ownable2Step {
         dstEid = dstEid_;
     }
 
-    //note: NEW
+    /**
+     * @notice Checks if a user owns the specified NFTs and if they are not staked
+     * @dev Reverts if array is empty, if user is not owner, or if any NFT is staked
+     * @param user Address to check ownership for
+     * @param tokenIds Array of NFT token IDs to check
+     */
     function checkIfUnassignedAndOwned(address user, uint256[] calldata tokenIds) public view {
 
         uint256 length = tokenIds.length;
