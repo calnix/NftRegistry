@@ -3,21 +3,13 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 
-import "./../src/NftLocker.sol";
-import "./INftStreaming.sol";
+import "./../../src/NftLocker.sol";
+import "./../INftStreaming.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // mocks
-import { MockNft } from "./mocks/MockNft.sol";
-import { EndpointV2Mock } from "./mocks/EndpointV2Mock.sol";
-
-// errors
-import "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
-// SendParam
-import "@layerzerolabs/oft-evm/contracts/oft/interfaces/IOFT.sol";
-import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
-import { OAppSender, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { EndpointV2Mock } from "./../mocks/EndpointV2Mock.sol";
 
 abstract contract ForkMainnet is Test {
 
