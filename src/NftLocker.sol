@@ -107,9 +107,9 @@ contract NftLocker is OApp, Pausable, Ownable2Step {
     //////////////////////////////////////////////////////////////*/
 
     //note: NEW
-    // to allow users to collect streaming rewards from NftStreaming contract while staking their NFTs for staking Pro
     /**
      * @notice Check if tokenIds owner matches supplied address
+     * @notice To allow users to collect streaming rewards from NftStreaming contract while staking their NFTs for staking
      * @dev If user is owner of all tokenIds, fn expected to revert
      * @param user Address to check against 
      * @param tokenIds TokenIds to check

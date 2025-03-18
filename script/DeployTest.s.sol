@@ -89,9 +89,9 @@ contract DeployRemote is LZState {
 
 abstract contract State is LZState {
 
-    address public mockNftAddress = 0x58bDE6071DB4a9B006FdAbe75a2eeB43DEcb779B;
-    address public nftLockerAddress = 0x3DC5b1063e2FF0F675611922fC4b07AcF79B518A;
-    address public nftRegistryAddress = 0x5D4D4b620488DC5CeB13a73a6e700925F7682b02;
+    address public mockNftAddress = 0x2E387A0740D7ac22809A3BD522B9FC39472f31Ee;
+    address public nftLockerAddress = 0x10DF7F2487c4F3c8038E440bB6566Ea11e342e38;
+    address public nftRegistryAddress = 0x284C14ba977714f4d1904f6C65e4e5a4c27696C2;
 
     MockNft public mockNft = MockNft(mockNftAddress);
     NftLocker public nftLocker = NftLocker(nftLockerAddress);

@@ -218,9 +218,8 @@ abstract contract StateLockedAndPaused is StateZero {
         super.setUp();
 
         vm.startPrank(userB);
-         nft.setApprovalForAll(address(nftLocker), true);
-         nftLocker.lock{value: 78_550}(tokenIdsB);
-
+            nft.setApprovalForAll(address(nftLocker), true);
+            nftLocker.lock{value: 78_550}(tokenIdsB);
         vm.stopPrank();
 
         // check assets
@@ -236,7 +235,6 @@ abstract contract StateLockedAndPaused is StateZero {
         // admin pauses
         vm.prank(owner);
         nftLocker.pause();
-
     }
 }
 
@@ -268,6 +266,15 @@ contract StateLockedAndPausedTest is StateLockedAndPaused {
         nftLocker.emergencyExit(tokenIds);
     }
 
+    function testStreamingOwnerCheckReverts() public {
+        vm.prank(userA);
+        vm.expectRevert(abi.encodeWithSelector(NftLocker.IncorrectOwner.selector));
+        nftLocker.streamingOwnerCheck(userA, tokenIdsB);
+    }
+
+    function testStreamingOwnerCheckDoesNotRevert() public {
+        nftLocker.streamingOwnerCheck(userB, tokenIdsB);
+    }
 }
 
 
